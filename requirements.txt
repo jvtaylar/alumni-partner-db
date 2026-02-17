@@ -1,0 +1,2 @@
+Django
+# Add other project dependencies below this line
