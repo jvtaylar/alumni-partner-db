@@ -776,3 +776,186 @@ def alumni_summary_report_pdf(request):
     resp = HttpResponse(pdf, content_type='application/pdf')
     resp['Content-Disposition'] = 'attachment; filename="alumni_summary_report.pdf"'
     return resp
+
+
+# Admin Dashboard Views
+def admin_dashboard_view(request):
+    """Render the admin dashboard template"""
+    return render(request, 'admin-dashboard.html')
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from django.contrib.auth.models import User
+import csv
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_users_list(request):
+    """List all users for admin management"""
+    users = User.objects.all().order_by('-date_joined')
+    data = [{
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+        'is_active': user.is_active,
+        'date_joined': user.date_joined,
+        'last_login': user.last_login
+    } for user in users]
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_toggle_user_status(request, user_id):
+    """Toggle user active status"""
+    try:
+        user = User.objects.get(id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        
+        # Create audit log
+        Report.objects.create(
+            title=f"User {'Activated' if user.is_active else 'Deactivated'}: {user.username}",
+            report_type='audit',
+            description=f"Status changed by {request.user.username}",
+            generated_by=request.user
+        )
+        
+        return Response({'success': True, 'is_active': user.is_active})
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_audit_logs(request):
+    """Get audit logs from Report model"""
+    logs = Report.objects.filter(report_type='audit').order_by('-created_at')[:100]
+    data = [{
+        'id': log.id,
+        'title': log.title,
+        'description': log.description,
+        'generated_by_username': log.generated_by.username if log.generated_by else 'System',
+        'created_at': log.created_at
+    } for log in logs]
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_alumni_bulk_action(request):
+    """Apply bulk action to alumni"""
+    status_filter = request.data.get('status_filter', '')
+    action = request.data.get('action', '')
+    
+    queryset = Alumni.objects.all()
+    if status_filter:
+        queryset = queryset.filter(status=status_filter)
+    
+    updated = 0
+    if action == 'mark_active':
+        updated = queryset.update(status='active')
+    elif action == 'mark_inactive':
+        updated = queryset.update(status='inactive')
+    elif action == 'mark_lost':
+        updated = queryset.update(status='lost_contact')
+    
+    # Create audit log
+    Report.objects.create(
+        title=f"Alumni Bulk Action: {action}",
+        report_type='audit',
+        description=f"Applied to {updated} alumni by {request.user.username}. Filter: {status_filter or 'all'}",
+        generated_by=request.user
+    )
+    
+    return Response({'success': True, 'updated': updated})
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_partner_bulk_action(request):
+    """Apply bulk action to partners"""
+    level_filter = request.data.get('level_filter', '')
+    action = request.data.get('action', '')
+    
+    queryset = Partner.objects.all()
+    if level_filter:
+        queryset = queryset.filter(engagement_level=level_filter)
+    
+    updated = 0
+    if action == 'upgrade_gold':
+        updated = queryset.update(engagement_level='gold')
+    elif action == 'set_silver':
+        updated = queryset.update(engagement_level='silver')
+    elif action == 'set_bronze':
+        updated = queryset.update(engagement_level='bronze')
+    elif action == 'downgrade_prospective':
+        updated = queryset.update(engagement_level='prospective')
+    
+    # Create audit log
+    Report.objects.create(
+        title=f"Partner Bulk Action: {action}",
+        report_type='audit',
+        description=f"Applied to {updated} partners by {request.user.username}. Filter: {level_filter or 'all'}",
+        generated_by=request.user
+    )
+    
+    return Response({'success': True, 'updated': updated})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_export_data(request, data_type):
+    """Export data as CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{data_type}_export.csv"'
+    
+    writer = csv.writer(response)
+    
+    if data_type == 'alumni':
+        writer.writerow(['First Name', 'Last Name', 'Email', 'Phone', 'Degree', 'Field of Study', 
+                        'Graduation Year', 'Current Company', 'Job Title', 'Industry', 'Status'])
+        for alumni in Alumni.objects.all():
+            writer.writerow([
+                alumni.first_name, alumni.last_name, alumni.email, alumni.phone or '',
+                alumni.degree, alumni.field_of_study, alumni.graduation_year,
+                alumni.current_company, alumni.job_title, alumni.industry, alumni.status
+            ])
+    
+    elif data_type == 'partners':
+        writer.writerow(['Name', 'Type', 'Engagement Level', 'Industry', 'Email', 'Phone', 
+                        'Primary Contact', 'City', 'Country', 'Partnership Start Date'])
+        for partner in Partner.objects.all():
+            writer.writerow([
+                partner.name, partner.partner_type, partner.engagement_level, partner.industry or '',
+                partner.email or '', partner.phone or '', partner.primary_contact_name or '',
+                partner.city or '', partner.country or '', partner.partnership_start_date or ''
+            ])
+    
+    elif data_type == 'engagements':
+        writer.writerow(['Alumni', 'Partner', 'Type', 'Date', 'Description', 'Notes'])
+        for engagement in Engagement.objects.all():
+            writer.writerow([
+                f"{engagement.alumni.first_name} {engagement.alumni.last_name}",
+                engagement.partner.name,
+                engagement.get_engagement_type_display(),
+                engagement.engagement_date,
+                engagement.description,
+                engagement.notes
+            ])
+    
+    # Create audit log
+    Report.objects.create(
+        title=f"Data Export: {data_type}",
+        report_type='audit',
+        description=f"Exported by {request.user.username}",
+        generated_by=request.user
+    )
+    
+    return response

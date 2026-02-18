@@ -138,6 +138,7 @@ class Engagement(models.Model):
         ('interview', 'Interview'),
         ('collaboration', 'Collaboration'),
         ('donation', 'Donation'),
+        ('internship', 'Internship'),
         ('other', 'Other'),
     ]
     

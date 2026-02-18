@@ -248,6 +248,9 @@ function displayAlumni(alumni) {
                             <i class="fas fa-calendar text-warning"></i> Graduated ${a.graduation_year || 'N/A'}
                         </p>
                         <p class="mb-2 small">
+                            <i class="fas fa-envelope text-danger"></i> ${a.email || 'No email'}
+                        </p>
+                        <p class="mb-2 small">
                             <i class="fas fa-industry text-info"></i> ${a.industry || 'Not specified'}
                         </p>
                     </div>
@@ -259,10 +262,15 @@ function displayAlumni(alumni) {
                     </div>
                     
                     <div class="d-grid gap-2">
-                        <a href="mailto:${a.email}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-envelope"></i> Contact
-                        </a>
-                        ${a.linkedin_url ? `<a href="${a.linkedin_url}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-linkedin"></i> LinkedIn</a>` : ''}
+                        ${a.email ? 
+                            `<a href="mailto:${a.email}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-envelope"></i> Contact
+                            </a>` :
+                            `<button class="btn btn-sm btn-primary" disabled style="opacity: 0.6;">
+                                <i class="fas fa-envelope"></i> No Email
+                            </button>`
+                        }
+                        ${a.linkedin_url ? `<a href="${a.linkedin_url}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info"><i class="fab fa-linkedin"></i> LinkedIn</a>` : ''}
                     </div>
                 </div>
             </div>

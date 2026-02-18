@@ -60,11 +60,13 @@ if (!localStorage.getItem('authToken')) window.location.href = '/login/';
         <div class="col-md-3">
             <select class="form-select" id="typeFilter" onchange="applyFilters()">
                 <option value="">All Types</option>
+                <option value="networking_event">Networking Event</option>
                 <option value="mentorship">Mentorship</option>
-                <option value="recruitment">Recruitment</option>
-                <option value="speaking">Speaking Event</option>
+                <option value="interview">Interview</option>
                 <option value="collaboration">Collaboration</option>
+                <option value="donation">Donation</option>
                 <option value="internship">Internship</option>
+                <option value="other">Other</option>
             </select>
         </div>
         <div class="col-md-3">
@@ -122,11 +124,13 @@ if (!localStorage.getItem('authToken')) window.location.href = '/login/';
                         <label for="engagementType" class="form-label">Engagement Type *</label>
                         <select class="form-select" id="engagementType" required>
                             <option value="">Select type...</option>
+                            <option value="networking_event">Networking Event</option>
                             <option value="mentorship">Mentorship</option>
-                            <option value="recruitment">Recruitment</option>
-                            <option value="speaking">Speaking Event</option>
+                            <option value="interview">Interview</option>
                             <option value="collaboration">Collaboration</option>
+                            <option value="donation">Donation</option>
                             <option value="internship">Internship</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     

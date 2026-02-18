@@ -370,6 +370,7 @@
                     <li class="nav-item" id="partnersLink" style="display: none;"><a class="nav-link" href="/partners/">Partners</a></li>
                     <li class="nav-item" id="engagementsLink" style="display: none;"><a class="nav-link" href="/engagements/">Engagements</a></li>
                     <li class="nav-item" id="analyticsLink" style="display: none;"><a class="nav-link" href="/analytics/">Analytics</a></li>
+                    <li class="nav-item" id="adminDashboardLink" style="display: none;"><a class="nav-link" href="/admin-dashboard/"><i class="fas fa-user-shield"></i> Admin</a></li>
                     <li class="nav-item" id="dashboardLink" style="display: none;"><a class="nav-link" href="/dashboard/">Dashboard</a></li>
                     <li class="nav-item" id="profileCreateLink" style="display: none;"><a class="nav-link" href="/profile/create/">Create Profile</a></li>
                     <li class="nav-item" id="logoutBtn" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
@@ -386,6 +387,7 @@
         const links = ['alumniLink', 'partnersLink', 'engagementsLink', 'analyticsLink', 'dashboardLink', 'logoutBtn'];
         const loginLink = 'loginLink';
         const profileCreateLink = document.getElementById('profileCreateLink');
+        const adminDashboardLink = document.getElementById('adminDashboardLink');
         
         if (token) {
             // User is logged in
@@ -396,24 +398,29 @@
             const elem = document.getElementById(loginLink);
             if (elem) elem.style.display = 'none';
 
-            // Show Create Profile only if user has no alumni profile
-            if (profileCreateLink) {
-                profileCreateLink.style.display = 'none';
-                try {
-                    const response = await fetch('/auth/user/', {
-                        headers: {
-                            'Authorization': 'Token ' + token
-                        }
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (!data.alumni) {
-                            profileCreateLink.style.display = 'block';
-                        }
+            // Check user status and show appropriate links
+            try {
+                const response = await fetch('/auth/user/', {
+                    headers: {
+                        'Authorization': 'Token ' + token
                     }
-                } catch (error) {
-                    // If request fails, keep it hidden
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Show Create Profile only if user has no alumni profile
+                    if (profileCreateLink) {
+                        profileCreateLink.style.display = data.alumni ? 'none' : 'block';
+                    }
+                    
+                    // Show Admin Dashboard only for staff/superuser
+                    if (adminDashboardLink) {
+                        adminDashboardLink.style.display = (data.is_staff || data.is_superuser) ? 'block' : 'none';
+                    }
                 }
+            } catch (error) {
+                // If request fails, keep admin link hidden
+                if (adminDashboardLink) adminDashboardLink.style.display = 'none';
             }
         } else {
             // User is not logged in
@@ -424,6 +431,7 @@
             const elem = document.getElementById(loginLink);
             if (elem) elem.style.display = 'block';
             if (profileCreateLink) profileCreateLink.style.display = 'none';
+            if (adminDashboardLink) adminDashboardLink.style.display = 'none';
         }
     }
     
