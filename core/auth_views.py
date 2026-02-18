@@ -157,6 +157,9 @@ class AlumniSelfProfileViewSet(viewsets.ViewSet):
         
         # Create new alumni profile
         data = request.data.copy()
+        # Remove csrf token if present (from form submissions)
+        if 'csrfmiddlewaretoken' in data:
+            data.pop('csrfmiddlewaretoken')
         
         # Set names from user if not provided
         if 'first_name' not in data or not data['first_name']:
@@ -168,7 +171,7 @@ class AlumniSelfProfileViewSet(viewsets.ViewSet):
         
         serializer = AlumniProfileSerializer(data=data)
         if serializer.is_valid():
-            alumni = Alumni.objects.create(user=request.user, **data)
+            alumni = Alumni.objects.create(user=request.user, **serializer.validated_data)
             return Response(
                 AlumniProfileSerializer(alumni).data,
                 status=status.HTTP_201_CREATED

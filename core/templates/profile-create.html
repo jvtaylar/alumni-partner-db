@@ -41,22 +41,28 @@
                                     <label for="degree" class="form-label">Degree *</label>
                                     <select class="form-select" id="degree" name="degree" required>
                                         <option value="">Select degree</option>
-                                        <option value="BS Computer Engineering">BS Computer Engineering</option>
-                                        <option value="BS Civil Engineering">BS Civil Engineering</option>
-                                        <option value="BS Environmental and Sanitary Engineering">BS Environmental and Sanitary Engineering</option>
-                                        <option value="BS Electrical Engineering">BS Electrical Engineering</option>
-                                        <option value="BS Electronics Engineering">BS Electronics Engineering</option>
-                                        <option value="BS Mechanical Engineering">BS Mechanical Engineering</option>
-                                        <option value="MS Computer Engineering">MS Computer Engineering</option>
-                                        <option value="MS Civil Engineering">MS Civil Engineering</option>
-                                        <option value="MS Environmental and Sanitary Engineering">MS Environmental and Sanitary Engineering</option>
+                                        <option value="BS">BS</option>
+                                        <option value="BA">BA</option>
+                                        <option value="MS">MS</option>
+                                        <option value="MA">MA</option>
+                                        <option value="PhD">PhD</option>
                                         <option value="Other">Other (Specify)</option>
                                     </select>
                                     <input type="text" class="form-control mt-2 d-none" id="degreeOther" placeholder="Enter your program">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="fieldOfStudy" class="form-label">Field of Study *</label>
-                                    <input type="text" class="form-control" id="fieldOfStudy" name="field_of_study" required>
+                                    <select class="form-select" id="fieldOfStudy" name="field_of_study" required>
+                                        <option value="">Select field of study</option>
+                                        <option value="Civil Engineering">Civil Engineering</option>
+                                        <option value="Computer Engineering">Computer Engineering</option>
+                                        <option value="Environmental and Sanitary Engineering">Environmental and Sanitary Engineering</option>
+                                        <option value="Electronics Engineering">Electronics Engineering</option>
+                                        <option value="Electrical Engineering">Electrical Engineering</option>
+                                        <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                        <option value="Other">Other (Specify)</option>
+                                    </select>
+                                    <input type="text" class="form-control mt-2 d-none" id="fieldOfStudyOther" placeholder="Enter your field of study">
                                 </div>
                             </div>
 
@@ -140,6 +146,16 @@ document.getElementById('degree').addEventListener('change', function() {
     }
 });
 
+document.getElementById('fieldOfStudy').addEventListener('change', function() {
+    const fieldOther = document.getElementById('fieldOfStudyOther');
+    if (this.value === 'Other') {
+        fieldOther.classList.remove('d-none');
+    } else {
+        fieldOther.classList.add('d-none');
+        fieldOther.value = '';
+    }
+});
+
 async function prefillUser() {
     const token = localStorage.getItem('authToken');
     if (!token) return;
@@ -169,6 +185,8 @@ async function handleProfileCreate(event) {
 
     const degreeSelect = document.getElementById('degree');
     const degreeOther = document.getElementById('degreeOther');
+    const fieldSelect = document.getElementById('fieldOfStudy');
+    const fieldOther = document.getElementById('fieldOfStudyOther');
 
     if (degreeSelect.value === 'Other') {
         const customProgram = (degreeOther.value || '').trim();
@@ -182,10 +200,27 @@ async function handleProfileCreate(event) {
         degreeSelect.value = customProgram;
     }
 
+    if (fieldSelect.value === 'Other') {
+        const customField = (fieldOther.value || '').trim();
+        if (!customField) {
+            document.getElementById('errorMessage').textContent = 'Please specify your field of study for Other.';
+            document.getElementById('errorMessage').classList.remove('d-none');
+            return;
+        }
+        const customFieldOption = new Option(customField, customField, true, true);
+        fieldSelect.add(customFieldOption);
+        fieldSelect.value = customField;
+    }
+
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
-    const csrftoken = getCookie('csrftoken');
     const token = localStorage.getItem('authToken');
+
+    if (!token) {
+        document.getElementById('errorMessage').textContent = 'Please login first.';
+        document.getElementById('errorMessage').classList.remove('d-none');
+        return;
+    }
 
     document.getElementById('errorMessage').classList.add('d-none');
     document.getElementById('successMessage').classList.add('d-none');
@@ -193,15 +228,21 @@ async function handleProfileCreate(event) {
     try {
         const response = await fetch('/api/my-profile/', {
             method: 'POST',
+            credentials: 'omit',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Token ' + token,
-                'X-CSRFToken': csrftoken
+                'Authorization': 'Token ' + token
             },
             body: JSON.stringify(data)
         });
 
-        const result = await response.json().catch(() => ({}));
+        const responseText = await response.text();
+        let result = {};
+        try {
+            result = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+            result = {};
+        }
 
         if (response.ok) {
             document.getElementById('successMessage').textContent = 'Profile created successfully! Redirecting to dashboard...';
@@ -213,7 +254,8 @@ async function handleProfileCreate(event) {
             const errors = Object.entries(result).map(([key, value]) =>
                 `${key}: ${Array.isArray(value) ? value.join(', ') : value}`
             ).join('\n');
-            document.getElementById('errorMessage').textContent = errors || 'Profile creation failed. Please try again.';
+            const fallback = responseText && responseText.trim() ? responseText : 'Profile creation failed. Please try again.';
+            document.getElementById('errorMessage').textContent = errors || fallback;
             document.getElementById('errorMessage').classList.remove('d-none');
         }
     } catch (error) {

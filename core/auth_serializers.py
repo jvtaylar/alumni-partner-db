@@ -53,6 +53,7 @@ class AlumniProfileSerializer(serializers.ModelSerializer):
     """Serializer for alumni to manage their own profile"""
     user = UserProfileSerializer(read_only=True)
     degree = serializers.CharField()
+    field_of_study = serializers.CharField()
     
     class Meta:
         model = Alumni
@@ -65,6 +66,21 @@ class AlumniProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_field_of_study(self, value):
+        allowed = {
+            'Civil Engineering',
+            'Computer Engineering',
+            'Environmental and Sanitary Engineering',
+            'Electronics Engineering',
+            'Electrical Engineering',
+            'Mechanical Engineering',
+        }
+        if value in allowed:
+            return value
+        if value and value.strip():
+            return value
+        raise serializers.ValidationError('Please specify your field of study.')
 
 
 class AlumniRegistrationSerializer(serializers.Serializer):
@@ -102,6 +118,21 @@ class AlumniRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError({'email': 'Email already has an alumni profile.'})
 
         return data
+
+    def validate_field_of_study(self, value):
+        allowed = {
+            'Civil Engineering',
+            'Computer Engineering',
+            'Environmental and Sanitary Engineering',
+            'Electronics Engineering',
+            'Electrical Engineering',
+            'Mechanical Engineering',
+        }
+        if value in allowed:
+            return value
+        if value and value.strip():
+            return value
+        raise serializers.ValidationError('Please specify your field of study.')
     
     def create(self, validated_data):
         # Extract password2 (not needed for model)

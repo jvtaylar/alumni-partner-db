@@ -8,15 +8,11 @@ class Alumni(models.Model):
     """Alumni profile model for tracking alumni information"""
     
     DEGREE_CHOICES = [
-        ('BS Computer Engineering', 'BS Computer Engineering'),
-        ('BS Civil Engineering', 'BS Civil Engineering'),
-        ('BS Environmental and Sanitary Engineering', 'BS Environmental and Sanitary Engineering'),
-        ('BS Electrical Engineering', 'BS Electrical Engineering'),
-        ('BS Electronics Engineering', 'BS Electronics Engineering'),
-        ('BS Mechanical Engineering', 'BS Mechanical Engineering'),
-        ('MS Computer Engineering', 'MS Computer Engineering'),
-        ('MS Civil Engineering', 'MS Civil Engineering'),
-        ('MS Environmental and Sanitary Engineering', 'MS Environmental and Sanitary Engineering'),
+        ('BS', 'BS'),
+        ('BA', 'BA'),
+        ('MS', 'MS'),
+        ('MA', 'MA'),
+        ('PhD', 'PhD'),
         ('Other', 'Other (Specify)'),
     ]
     

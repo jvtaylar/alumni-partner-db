@@ -97,22 +97,6 @@ function getCookie(name) {
 
 async function handleRegister(event) {
     event.preventDefault();
-    
-    const degreeSelect = document.getElementById('degree');
-    const degreeOther = document.getElementById('degreeOther');
-
-    if (degreeSelect.value === 'Other') {
-        const customProgram = (degreeOther.value || '').trim();
-        if (!customProgram) {
-            document.getElementById('errorMessage').textContent = 'Please specify your program for Other.';
-            document.getElementById('errorMessage').classList.remove('d-none');
-            return;
-        }
-        // Replace the select value with the custom program
-        const customOption = new Option(customProgram, customProgram, true, true);
-        degreeSelect.add(customOption);
-        degreeSelect.value = customProgram;
-    }
 
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);

@@ -17,6 +17,21 @@ class AlumniSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def validate_field_of_study(self, value):
+        allowed = {
+            'Civil Engineering',
+            'Computer Engineering',
+            'Environmental and Sanitary Engineering',
+            'Electronics Engineering',
+            'Electrical Engineering',
+            'Mechanical Engineering',
+        }
+        if value in allowed:
+            return value
+        if value and value.strip():
+            return value
+        raise serializers.ValidationError('Please specify your field of study.')
+
 
 class AlumniDetailSerializer(AlumniSerializer):
     """Detailed serializer for Alumni including engagements"""
