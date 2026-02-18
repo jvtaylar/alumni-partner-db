@@ -136,6 +136,10 @@ CORS_ALLOWED_ORIGINS = [
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
+# Email (dev)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'no-reply@alumnipartnerconnect.local'
+
 # Database Configuration
 DATABASES = {
     'default': {

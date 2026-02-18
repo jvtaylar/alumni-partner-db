@@ -4,6 +4,7 @@ from .models import Alumni, Partner, Engagement, Report
 
 class AlumniSerializer(serializers.ModelSerializer):
     """Serializer for Alumni model"""
+    degree = serializers.CharField()
     
     class Meta:
         model = Alumni

@@ -335,6 +335,7 @@
                     <li class="nav-item" id="engagementsLink" style="display: none;"><a class="nav-link" href="/engagements/">Engagements</a></li>
                     <li class="nav-item" id="analyticsLink" style="display: none;"><a class="nav-link" href="/analytics/">Analytics</a></li>
                     <li class="nav-item" id="dashboardLink" style="display: none;"><a class="nav-link" href="/dashboard/">Dashboard</a></li>
+                    <li class="nav-item" id="profileCreateLink" style="display: none;"><a class="nav-link" href="/profile/create/">Create Profile</a></li>
                     <li class="nav-item" id="logoutBtn" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
                     <li class="nav-item" id="loginLink"><a class="nav-link" href="/login/">Login</a></li>
                 </ul>
@@ -344,10 +345,11 @@
 
     <script>
     // Update navigation based on login status
-    function updateNavigation() {
+    async function updateNavigation() {
         const token = localStorage.getItem('authToken');
         const links = ['alumniLink', 'partnersLink', 'engagementsLink', 'analyticsLink', 'dashboardLink', 'logoutBtn'];
         const loginLink = 'loginLink';
+        const profileCreateLink = document.getElementById('profileCreateLink');
         
         if (token) {
             // User is logged in
@@ -357,6 +359,26 @@
             });
             const elem = document.getElementById(loginLink);
             if (elem) elem.style.display = 'none';
+
+            // Show Create Profile only if user has no alumni profile
+            if (profileCreateLink) {
+                profileCreateLink.style.display = 'none';
+                try {
+                    const response = await fetch('/auth/user/', {
+                        headers: {
+                            'Authorization': 'Token ' + token
+                        }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (!data.alumni) {
+                            profileCreateLink.style.display = 'block';
+                        }
+                    }
+                } catch (error) {
+                    // If request fails, keep it hidden
+                }
+            }
         } else {
             // User is not logged in
             links.forEach(id => {
@@ -365,6 +387,7 @@
             });
             const elem = document.getElementById(loginLink);
             if (elem) elem.style.display = 'block';
+            if (profileCreateLink) profileCreateLink.style.display = 'none';
         }
     }
     

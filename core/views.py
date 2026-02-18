@@ -13,6 +13,95 @@ from .serializers import (
     EngagementSerializer, ReportSerializer,
     AlumniStatsSerializer, PartnerStatsSerializer
 )
+import io
+from django.http import HttpResponse
+from django.utils import timezone
+
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    REPORTLAB_AVAILABLE = True
+except Exception:
+    REPORTLAB_AVAILABLE = False
+
+
+def _create_pdf_bytes(title, data_lines):
+    """Create a simple PDF in-memory from title and list of text lines.
+
+    Returns bytes of PDF. Requires reportlab.
+    """
+    if not REPORTLAB_AVAILABLE:
+        return None
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 72
+    c.setFont('Helvetica-Bold', 16)
+    c.drawString(72, y, title)
+    y -= 28
+    c.setFont('Helvetica', 10)
+    for line in data_lines:
+        if y < 72:
+            c.showPage()
+            y = height - 72
+            c.setFont('Helvetica', 10)
+        c.drawString(72, y, line)
+        y -= 14
+
+    c.showPage()
+    c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
+def _report_lines(report):
+    """Convert a Report object into a list of text lines for PDF output."""
+    data = report.data or {}
+
+    if report.report_type == 'alumni_summary':
+        lines = [
+            f"Total alumni: {data.get('total_alumni', 0)}",
+            f"Active alumni: {data.get('active_alumni', 0)}",
+            f"Inactive alumni: {data.get('inactive_alumni', 0)}",
+            "",
+            "By degree:",
+        ]
+        for deg, cnt in (data.get('by_degree') or {}).items():
+            lines.append(f"- {deg}: {cnt}")
+        return lines
+
+    if report.report_type == 'partner_summary':
+        lines = [
+            f"Total partners: {data.get('total_partners', 0)}",
+            "",
+            "By type:",
+        ]
+        for t, cnt in (data.get('by_type') or {}).items():
+            lines.append(f"- {t}: {cnt}")
+        lines.append("")
+        lines.append("By engagement level:")
+        for lvl, cnt in (data.get('by_engagement_level') or {}).items():
+            lines.append(f"- {lvl}: {cnt}")
+        return lines
+
+    if report.report_type == 'engagement_analytics':
+        lines = [
+            f"Total engagements: {data.get('total_engagements', 0)}",
+            "",
+            "By type:",
+        ]
+        for t, cnt in (data.get('by_type') or {}).items():
+            lines.append(f"- {t}: {cnt}")
+        lines.append("")
+        lines.append("Top partners:")
+        for p in (data.get('top_partners') or []):
+            lines.append(f"- {p.get('name')}: {p.get('count')}")
+        return lines
+
+    # Fallback
+    return ["Report data:", str(data)]
 
 
 def landing_page(request):
@@ -369,3 +458,156 @@ class ReportViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(report)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'])
+    def preview(self, request, pk=None):
+        """Render a simple HTML preview for a report"""
+        report = self.get_object()
+        context = {
+            'report': report,
+            'generated_at': report.created_at or timezone.now(),
+        }
+        return render(request, 'report_preview.html', context)
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        """Download a PDF for an existing report"""
+        report = self.get_object()
+
+        if not REPORTLAB_AVAILABLE:
+            return Response({'error': 'reportlab not installed on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        lines = _report_lines(report)
+        pdf = _create_pdf_bytes(report.title, lines)
+        if pdf is None:
+            return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="report_{report.id}.pdf"'
+        return resp
+
+    @action(detail=False, methods=['post'])
+    def generate_alumni_summary_pdf(self, request):
+        """Generate alumni summary report and return PDF"""
+        # Build same data
+        total = Alumni.objects.count()
+        active = Alumni.objects.filter(status='active').count()
+        by_degree = dict(
+            Alumni.objects.values_list('degree').annotate(count=Count('id'))
+        )
+
+        data = {
+            'total_alumni': total,
+            'active_alumni': active,
+            'inactive_alumni': total - active,
+            'by_degree': by_degree,
+        }
+
+        report = Report.objects.create(
+            title='Alumni Summary Report',
+            report_type='alumni_summary',
+            data=data,
+            generated_by=request.user
+        )
+
+        # Create PDF
+        if not REPORTLAB_AVAILABLE:
+            return Response({'error': 'reportlab not installed on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        lines = [f"Total alumni: {data['total_alumni']}", f"Active alumni: {data['active_alumni']}", f"Inactive alumni: {data['inactive_alumni']}", "", 'By degree:']
+        for deg, cnt in data['by_degree'].items():
+            lines.append(f"- {deg}: {cnt}")
+
+        pdf = _create_pdf_bytes(report.title, lines)
+        if pdf is None:
+            return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="report_{report.id}_alumni.pdf"'
+        return resp
+
+    @action(detail=False, methods=['post'])
+    def generate_partner_summary_pdf(self, request):
+        """Generate partner summary report and return PDF"""
+        total = Partner.objects.count()
+        by_type = dict(
+            Partner.objects.values_list('partner_type').annotate(count=Count('id'))
+        )
+        by_level = dict(
+            Partner.objects.values_list('engagement_level').annotate(count=Count('id'))
+        )
+
+        data = {
+            'total_partners': total,
+            'by_type': by_type,
+            'by_engagement_level': by_level,
+        }
+
+        report = Report.objects.create(
+            title='Partner Summary Report',
+            report_type='partner_summary',
+            data=data,
+            generated_by=request.user
+        )
+
+        if not REPORTLAB_AVAILABLE:
+            return Response({'error': 'reportlab not installed on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        lines = [f"Total partners: {data['total_partners']}", "", 'By type:']
+        for t, cnt in data['by_type'].items():
+            lines.append(f"- {t}: {cnt}")
+        lines.append('')
+        lines.append('By engagement level:')
+        for lvl, cnt in data['by_engagement_level'].items():
+            lines.append(f"- {lvl}: {cnt}")
+
+        pdf = _create_pdf_bytes(report.title, lines)
+        if pdf is None:
+            return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="report_{report.id}_partners.pdf"'
+        return resp
+
+    @action(detail=False, methods=['post'])
+    def generate_engagement_analytics_pdf(self, request):
+        """Generate engagement analytics report and return PDF"""
+        total_engagements = Engagement.objects.count()
+        by_type = dict(
+            Engagement.objects.values_list('engagement_type').annotate(count=Count('id'))
+        )
+
+        top_partners_qs = Partner.objects.annotate(engagement_count=Count('engagements')).order_by('-engagement_count')[:10]
+        top_partners = [{ 'name': p.name, 'count': p.engagement_count } for p in top_partners_qs]
+
+        data = {
+            'total_engagements': total_engagements,
+            'by_type': by_type,
+            'top_partners': top_partners,
+        }
+
+        report = Report.objects.create(
+            title='Engagement Analytics Report',
+            report_type='engagement_analytics',
+            data=data,
+            generated_by=request.user
+        )
+
+        if not REPORTLAB_AVAILABLE:
+            return Response({'error': 'reportlab not installed on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        lines = [f"Total engagements: {data['total_engagements']}", '', 'By type:']
+        for t, cnt in data['by_type'].items():
+            lines.append(f"- {t}: {cnt}")
+        lines.append('')
+        lines.append('Top partners:')
+        for p in data['top_partners']:
+            lines.append(f"- {p['name']}: {p['count']}")
+
+        pdf = _create_pdf_bytes(report.title, lines)
+        if pdf is None:
+            return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        resp = HttpResponse(pdf, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="report_{report.id}_engagements.pdf"'
+        return resp

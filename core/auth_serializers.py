@@ -52,6 +52,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class AlumniProfileSerializer(serializers.ModelSerializer):
     """Serializer for alumni to manage their own profile"""
     user = UserProfileSerializer(read_only=True)
+    degree = serializers.CharField()
     
     class Meta:
         model = Alumni
@@ -78,15 +79,7 @@ class AlumniRegistrationSerializer(serializers.Serializer):
     
     # Alumni fields
     phone = serializers.CharField(required=False, allow_blank=True)
-    degree = serializers.ChoiceField(choices=[
-        ('BA', 'Bachelor of Arts'),
-        ('BS', 'Bachelor of Science'),
-        ('MA', 'Master of Arts'),
-        ('MS', 'Master of Science'),
-        ('MBA', 'Master of Business Administration'),
-        ('PhD', 'Doctor of Philosophy'),
-        ('Other', 'Other'),
-    ])
+    degree = serializers.CharField(max_length=100)
     field_of_study = serializers.CharField(max_length=200)
     graduation_year = serializers.IntegerField()
     current_company = serializers.CharField(required=False, allow_blank=True)
@@ -107,7 +100,7 @@ class AlumniRegistrationSerializer(serializers.Serializer):
         
         if Alumni.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError({'email': 'Email already has an alumni profile.'})
-        
+
         return data
     
     def create(self, validated_data):

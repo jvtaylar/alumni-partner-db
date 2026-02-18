@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Create Alumni Profile - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<section class="hero" style="padding: 40px 0;">
+    <div class="container">
+        <h1>Create Alumni Profile</h1>
+        <p class="lead">Complete your alumni profile after registering your account</p>
+    </div>
+</section>
+
+<section class="api-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-7 mx-auto">
+                <div class="card shadow-lg">
+                    <div class="card-body p-5">
+                        <h2 class="card-title text-center mb-4">Alumni Profile</h2>
+
+                        <form id="profileForm" onsubmit="handleProfileCreate(event)">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">First Name *</label>
+                                    <input type="text" class="form-control" id="firstName" name="first_name" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">Last Name *</label>
+                                    <input type="text" class="form-control" id="lastName" name="last_name" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="degree" class="form-label">Degree *</label>
+                                    <select class="form-select" id="degree" name="degree" required>
+                                        <option value="">Select degree</option>
+                                        <option value="BS Computer Engineering">BS Computer Engineering</option>
+                                        <option value="BS Civil Engineering">BS Civil Engineering</option>
+                                        <option value="BS Environmental and Sanitary Engineering">BS Environmental and Sanitary Engineering</option>
+                                        <option value="BS Electrical Engineering">BS Electrical Engineering</option>
+                                        <option value="BS Electronics Engineering">BS Electronics Engineering</option>
+                                        <option value="BS Mechanical Engineering">BS Mechanical Engineering</option>
+                                        <option value="MS Computer Engineering">MS Computer Engineering</option>
+                                        <option value="MS Civil Engineering">MS Civil Engineering</option>
+                                        <option value="MS Environmental and Sanitary Engineering">MS Environmental and Sanitary Engineering</option>
+                                        <option value="Other">Other (Specify)</option>
+                                    </select>
+                                    <input type="text" class="form-control mt-2 d-none" id="degreeOther" placeholder="Enter your program">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="fieldOfStudy" class="form-label">Field of Study *</label>
+                                    <input type="text" class="form-control" id="fieldOfStudy" name="field_of_study" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="graduationYear" class="form-label">Graduation Year *</label>
+                                <input type="number" class="form-control" id="graduationYear" name="graduation_year" required min="1950" max="2050">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="linkedIn" class="form-label">LinkedIn URL</label>
+                                    <input type="url" class="form-control" id="linkedIn" name="linkedin_url">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="company" class="form-label">Current Company</label>
+                                    <input type="text" class="form-control" id="company" name="current_company">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="jobTitle" class="form-label">Job Title</label>
+                                    <input type="text" class="form-control" id="jobTitle" name="job_title">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="industry" class="form-label">Industry</label>
+                                    <input type="text" class="form-control" id="industry" name="industry">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="lost_contact">Lost Contact</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="bio" class="form-label">Bio</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3"></textarea>
+                            </div>
+
+                            <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                            <div id="successMessage" class="alert alert-success d-none" role="alert"></div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                <i class="fas fa-user-check"></i> Create Profile
+                            </button>
+                        </form>
+
+                        <p class="text-center text-muted">
+                            Go back to <a href="/dashboard/">Dashboard</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+if (!localStorage.getItem('authToken')) {
+    window.location.href = '/login/';
+}
+
+document.getElementById('degree').addEventListener('change', function() {
+    const degreeOther = document.getElementById('degreeOther');
+    if (this.value === 'Other') {
+        degreeOther.classList.remove('d-none');
+    } else {
+        degreeOther.classList.add('d-none');
+        degreeOther.value = '';
+    }
+});
+
+async function prefillUser() {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/auth/user/', {
+            headers: { 'Authorization': 'Token ' + token }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const user = data.user;
+
+        if (user) {
+            document.getElementById('firstName').value = user.first_name || '';
+            document.getElementById('lastName').value = user.last_name || '';
+            document.getElementById('email').value = user.email || '';
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+prefillUser();
+
+async function handleProfileCreate(event) {
+    event.preventDefault();
+
+    const degreeSelect = document.getElementById('degree');
+    const degreeOther = document.getElementById('degreeOther');
+
+    if (degreeSelect.value === 'Other') {
+        const customProgram = (degreeOther.value || '').trim();
+        if (!customProgram) {
+            document.getElementById('errorMessage').textContent = 'Please specify your program for Other.';
+            document.getElementById('errorMessage').classList.remove('d-none');
+            return;
+        }
+        const customOption = new Option(customProgram, customProgram, true, true);
+        degreeSelect.add(customOption);
+        degreeSelect.value = customProgram;
+    }
+
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData);
+    const csrftoken = getCookie('csrftoken');
+    const token = localStorage.getItem('authToken');
+
+    document.getElementById('errorMessage').classList.add('d-none');
+    document.getElementById('successMessage').classList.add('d-none');
+
+    try {
+        const response = await fetch('/api/my-profile/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+            document.getElementById('successMessage').textContent = 'Profile created successfully! Redirecting to dashboard...';
+            document.getElementById('successMessage').classList.remove('d-none');
+            setTimeout(() => {
+                window.location.href = '/dashboard/';
+            }, 1500);
+        } else {
+            const errors = Object.entries(result).map(([key, value]) =>
+                `${key}: ${Array.isArray(value) ? value.join(', ') : value}`
+            ).join('\n');
+            document.getElementById('errorMessage').textContent = errors || 'Profile creation failed. Please try again.';
+            document.getElementById('errorMessage').classList.remove('d-none');
+        }
+    } catch (error) {
+        document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
+        document.getElementById('errorMessage').classList.remove('d-none');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

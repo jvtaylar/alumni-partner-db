@@ -158,6 +158,13 @@
                             </a>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-2" id="profileCreateAction" style="display: none;">
+                            <a href="/profile/create/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-user-check"></i> Create Alumni Profile
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -331,8 +338,12 @@ async function loadAlumniProfile(userId, token) {
 
             if (alumni) {
                 displayProfile(alumni);
+                const profileAction = document.getElementById('profileCreateAction');
+                if (profileAction) profileAction.style.display = 'none';
             } else {
                 displayNoProfile();
+                const profileAction = document.getElementById('profileCreateAction');
+                if (profileAction) profileAction.style.display = 'block';
             }
         } else {
             displayNoProfile();
@@ -411,7 +422,7 @@ function displayNoProfile() {
     const html = `
         <p class="text-muted">
             You don't have an alumni profile yet. 
-            <a href="/register/">Create one now</a>
+            <a href="/profile/create/">Create one now</a>
         </p>
     `;
     document.getElementById('profileContent').innerHTML = html;

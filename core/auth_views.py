@@ -8,23 +8,22 @@ from .auth_serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
     UserProfileSerializer,
-    AlumniProfileSerializer,
-    AlumniRegistrationSerializer
+    AlumniProfileSerializer
 )
 from .models import Alumni
 
 
 @api_view(['POST'])
 def alumni_register(request):
-    """Register a new alumni user and create profile"""
-    serializer = AlumniRegistrationSerializer(data=request.data)
+    """Register a new user account (no alumni profile yet)"""
+    serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        alumni = serializer.save()
-        user = alumni.user
-        Token.objects.get_or_create(user=user)
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
         
         return Response({
-            'message': 'Alumni registration successful',
+            'message': 'User registration successful',
+            'token': token.key,
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -32,7 +31,7 @@ def alumni_register(request):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
             },
-            'alumni': AlumniProfileSerializer(alumni).data,
+            'alumni': None,
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -158,7 +157,6 @@ class AlumniSelfProfileViewSet(viewsets.ViewSet):
         
         # Create new alumni profile
         data = request.data.copy()
-        data['user'] = request.user.id
         
         # Set names from user if not provided
         if 'first_name' not in data or not data['first_name']:
@@ -170,9 +168,7 @@ class AlumniSelfProfileViewSet(viewsets.ViewSet):
         
         serializer = AlumniProfileSerializer(data=data)
         if serializer.is_valid():
-            alumni = Alumni.objects.create(user=request.user, **{
-                k: v for k, v in request.data.items() if k != 'user'
-            })
+            alumni = Alumni.objects.create(user=request.user, **data)
             return Response(
                 AlumniProfileSerializer(alumni).data,
                 status=status.HTTP_201_CREATED

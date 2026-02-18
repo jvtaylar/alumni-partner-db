@@ -8,13 +8,16 @@ class Alumni(models.Model):
     """Alumni profile model for tracking alumni information"""
     
     DEGREE_CHOICES = [
-        ('BA', 'Bachelor of Arts'),
-        ('BS', 'Bachelor of Science'),
-        ('MA', 'Master of Arts'),
-        ('MS', 'Master of Science'),
-        ('MBA', 'Master of Business Administration'),
-        ('PhD', 'Doctor of Philosophy'),
-        ('Other', 'Other'),
+        ('BS Computer Engineering', 'BS Computer Engineering'),
+        ('BS Civil Engineering', 'BS Civil Engineering'),
+        ('BS Environmental and Sanitary Engineering', 'BS Environmental and Sanitary Engineering'),
+        ('BS Electrical Engineering', 'BS Electrical Engineering'),
+        ('BS Electronics Engineering', 'BS Electronics Engineering'),
+        ('BS Mechanical Engineering', 'BS Mechanical Engineering'),
+        ('MS Computer Engineering', 'MS Computer Engineering'),
+        ('MS Civil Engineering', 'MS Civil Engineering'),
+        ('MS Environmental and Sanitary Engineering', 'MS Environmental and Sanitary Engineering'),
+        ('Other', 'Other (Specify)'),
     ]
     
     STATUS_CHOICES = [
@@ -33,7 +36,7 @@ class Alumni(models.Model):
     phone = models.CharField(max_length=20, blank=True, null=True)
     
     # Educational Background
-    degree = models.CharField(max_length=50, choices=DEGREE_CHOICES)
+    degree = models.CharField(max_length=120, choices=DEGREE_CHOICES)
     field_of_study = models.CharField(max_length=200)
     graduation_year = models.IntegerField()
     

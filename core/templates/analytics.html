@@ -345,7 +345,7 @@ async function generateReport(type) {
         return;
     }
 
-    // Map friendly types to the backend action endpoints
+    // Map friendly types to the backend JSON generation endpoints
     const endpointMap = {
         'alumni': '/api/reports/generate_alumni_summary/',
         'partner': '/api/reports/generate_partner_summary/',
@@ -371,11 +371,19 @@ async function generateReport(type) {
 
         if (response.ok) {
             const report = await response.json();
-            const reportLink = `/api/reports/${report.id}/`;
+            const previewUrl = `/api/reports/${report.id}/preview/`;
+            const downloadUrl = `/api/reports/${report.id}/download_pdf/`;
+
+            // Open preview in a new tab so user can review before downloading
+            window.open(previewUrl, '_blank', 'noopener');
+
             document.getElementById('reportResult').innerHTML = `
                 <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> Report generated successfully!<br>
-                    <small>Report ID: ${report.id} — <a href="${reportLink}" target="_blank">View JSON</a></small>
+                    <i class="fas fa-check-circle"></i> Report generated. Preview opened in a new tab.<br>
+                    <small>
+                        <a href="${previewUrl}" target="_blank">Open Preview</a> ·
+                        <a href="${downloadUrl}" target="_blank">Download PDF</a>
+                    </small>
                 </div>
             `;
         } else {
