@@ -118,26 +118,34 @@ def landing_page(request):
     return render(request, 'index.html', context)
 
 
+@login_required
 def dashboard_view(request):
     """Dashboard view for authenticated users"""
-    # Check if user has token in localStorage (from API login)
-    # If not authenticated via session, show login page
-    if not request.user.is_authenticated:
-        # Check if coming from API login with token
+    # For API token auth, we need to validate the token
+    user = request.user
+    
+    # If user is not authenticated via session, check for token auth
+    if not user.is_authenticated:
+        from rest_framework.authtoken.models import Token
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if not auth_header.startswith('Token '):
-            # Render dashboard but let frontend JS handle auth check
-            pass
+        if auth_header.startswith('Token '):
+            token_key = auth_header.split(' ')[1]
+            try:
+                token = Token.objects.get(key=token_key)
+                user = token.user
+            except Token.DoesNotExist:
+                pass
     
     alumni = None
-    if request.user.is_authenticated:
-        alumni = Alumni.objects.filter(user=request.user).first()
+    if user.is_authenticated:
+        alumni = Alumni.objects.filter(user=user).first()
     
     alumni_count = Alumni.objects.count()
     partner_count = Partner.objects.count()
     engagement_count = Engagement.objects.count()
     
     context = {
+        'user': user,
         'alumni': alumni,
         'alumni_count': alumni_count,
         'partner_count': partner_count,
@@ -611,3 +619,160 @@ class ReportViewSet(viewsets.ModelViewSet):
         resp = HttpResponse(pdf, content_type='application/pdf')
         resp['Content-Disposition'] = f'attachment; filename="report_{report.id}_engagements.pdf"'
         return resp
+
+
+@login_required
+def alumni_summary_report(request):
+    """Alumni Summary Report with filtering options - Admin only"""
+    # Restrict access to admin/staff users
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("You do not have permission to access this report.")
+    
+    alumni_queryset = Alumni.objects.all()
+    
+    # Apply filters
+    degree_filter = request.GET.get('degree', '')
+    status_filter = request.GET.get('status', '')
+    graduation_year_min = request.GET.get('graduation_year_min', '')
+    graduation_year_max = request.GET.get('graduation_year_max', '')
+    
+    if degree_filter:
+        alumni_queryset = alumni_queryset.filter(degree=degree_filter)
+    if status_filter:
+        alumni_queryset = alumni_queryset.filter(status=status_filter)
+    if graduation_year_min:
+        alumni_queryset = alumni_queryset.filter(graduation_year__gte=graduation_year_min)
+    if graduation_year_max:
+        alumni_queryset = alumni_queryset.filter(graduation_year__lte=graduation_year_max)
+    
+    # Get unique values for filter dropdowns
+    degree_choices = Alumni.DEGREE_CHOICES
+    status_choices = Alumni.STATUS_CHOICES
+    years = sorted(Alumni.objects.values_list('graduation_year', flat=True).distinct())
+    
+    context = {
+        'alumni': alumni_queryset,
+        'degree_choices': degree_choices,
+        'status_choices': status_choices,
+        'years': years,
+        'selected_degree': degree_filter,
+        'selected_status': status_filter,
+        'selected_graduation_year_min': graduation_year_min,
+        'selected_graduation_year_max': graduation_year_max,
+        'total_count': alumni_queryset.count(),
+    }
+    return render(request, 'alumni-summary-report.html', context)
+
+
+@login_required
+def analytics_view(request):
+    """Analytics view - passes user context to template"""
+    context = {
+        'user': request.user,
+    }
+    return render(request, 'analytics.html', context)
+
+
+@login_required
+def alumni_summary_report_pdf(request):
+    """Generate PDF for Alumni Summary Report with filters"""
+    # Restrict access to admin/staff users
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("You do not have permission to access this report.")
+    
+    alumni_queryset = Alumni.objects.all()
+    
+    # Apply filters
+    degree_filter = request.GET.get('degree', '')
+    status_filter = request.GET.get('status', '')
+    graduation_year_min = request.GET.get('graduation_year_min', '')
+    graduation_year_max = request.GET.get('graduation_year_max', '')
+    
+    if degree_filter:
+        alumni_queryset = alumni_queryset.filter(degree=degree_filter)
+    if status_filter:
+        alumni_queryset = alumni_queryset.filter(status=status_filter)
+    if graduation_year_min:
+        alumni_queryset = alumni_queryset.filter(graduation_year__gte=graduation_year_min)
+    if graduation_year_max:
+        alumni_queryset = alumni_queryset.filter(graduation_year__lte=graduation_year_max)
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 72
+    
+    # Title
+    c.setFont('Helvetica-Bold', 20)
+    c.drawString(72, y, 'Alumni Summary Report')
+    y -= 28
+    
+    # Generate timestamp
+    c.setFont('Helvetica', 10)
+    c.drawString(72, y, f'Generated on: {timezone.now().strftime("%B %d, %Y at %H:%M:%S")}')
+    y -= 14
+    
+    # Summary
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(72, y, 'Report Summary')
+    y -= 16
+    c.setFont('Helvetica', 10)
+    
+    summary_lines = [
+        f"Total Alumni: {alumni_queryset.count()}",
+        f"Degree Filter: {degree_filter or 'All'}",
+        f"Status Filter: {status_filter or 'All'}",
+        f"Graduation Year: {graduation_year_min or 'Any'} - {graduation_year_max or 'Any'}",
+    ]
+    
+    for line in summary_lines:
+        if y < 72:
+            c.showPage()
+            y = height - 72
+        c.drawString(72, y, line)
+        y -= 14
+    
+    y -= 14
+    
+    # Table header
+    c.setFont('Helvetica-Bold', 9)
+    col_widths = [80, 100, 60, 80, 60, 120]
+    cols = ['Name', 'Email', 'Degree', 'Field of Study', 'Grad Year', 'Company']
+    x = 72
+    for col, width in zip(cols, col_widths):
+        c.drawString(x, y, col)
+        x += width
+    y -= 14
+    
+    # Table data
+    c.setFont('Helvetica', 8)
+    for alumnus in alumni_queryset[:50]:  # Limit to first 50 for PDF
+        if y < 72:
+            c.showPage()
+            y = height - 72
+        
+        name = f"{alumnus.first_name} {alumnus.last_name}"[:15]
+        email = (alumnus.email or '')[:20]
+        degree = alumnus.get_degree_display()[:10]
+        field = alumnus.field_of_study[:15]
+        year = str(alumnus.graduation_year)
+        company = (alumnus.current_company or '')[:15]
+        
+        x = 72
+        for col, width in zip([name, email, degree, field, year, company], col_widths):
+            c.drawString(x, y, col)
+            x += width
+        y -= 12
+    
+    c.showPage()
+    c.save()
+    
+    pdf = buffer.getvalue()
+    buffer.close()
+    
+    resp = HttpResponse(pdf, content_type='application/pdf')
+    resp['Content-Disposition'] = 'attachment; filename="alumni_summary_report.pdf"'
+    return resp

@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Alumni Summary Report - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<script>
+if (!localStorage.getItem('authToken')) window.location.href = '/login/';
+</script>
+
+{% if not user.is_superuser and not user.is_staff %}
+    <div class="container py-5">
+        <div class="alert alert-danger mt-5" role="alert">
+            <h4 class="alert-heading">
+                <i class="fas fa-lock"></i> Access Denied
+            </h4>
+            <p>This report is only available to administrator users. You do not have permission to access this resource.</p>
+            <hr>
+            <a href="/dashboard/" class="btn btn-primary">Return to Dashboard</a>
+        </div>
+    </div>
+{% else %}
+
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .filter-section {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        color: #333;
+        display: block;
+        margin-bottom: 8px;
+    }
+    
+    .filter-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 0.95rem;
+    }
+    
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-primary, .btn-secondary {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+        background: #e9ecef;
+        color: #333;
+    }
+    
+    .btn-secondary:hover {
+        background: #dee2e6;
+    }
+    
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-top: 10px;
+    }
+    
+    .report-table-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .report-table thead {
+        background: #f8f9fa;
+        border-bottom: 2px solid #ddd;
+    }
+    
+    .report-table thead th {
+        padding: 20px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .report-table tbody tr {
+        border-bottom: 1px solid #eee;
+        transition: background 0.2s ease;
+    }
+    
+    .report-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .report-table tbody td {
+        padding: 15px 20px;
+        color: #555;
+    }
+    
+    .report-table .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .badge-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .badge-lost {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+    
+    .empty-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .empty-message i {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .export-buttons {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+        display: flex;
+        gap: 10px;
+    }
+</style>
+
+<div class="report-header">
+    <div class="container">
+        <h1 class="mb-2">Alumni Summary Report</h1>
+        <p class="mb-0">View and filter alumni data in table format</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <h5 class="mb-4">Filter Options</h5>
+        <form method="get" id="filterForm">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="degree">Degree</label>
+                    <select name="degree" id="degree">
+                        <option value="">All Degrees</option>
+                        {% for value, label in degree_choices %}
+                            <option value="{{ value }}" {% if selected_degree == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="status">Status</label>
+                    <select name="status" id="status">
+                        <option value="">All Statuses</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="graduation_year_min">Graduation Year (From)</label>
+                    <select name="graduation_year_min" id="graduation_year_min">
+                        <option value="">Any Year</option>
+                        {% for year in years %}
+                            <option value="{{ year }}" {% if selected_graduation_year_min|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="graduation_year_max">Graduation Year (To)</label>
+                    <select name="graduation_year_max" id="graduation_year_max">
+                        <option value="">Any Year</option>
+                        {% for year in years %}
+                            <option value="{{ year }}" {% if selected_graduation_year_max|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-buttons">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <a href="{% url 'alumni-summary-report' %}" class="btn-secondary">
+                    <i class="fas fa-times"></i> Clear Filters
+                </a>
+                <a href="{% url 'alumni-summary-report-pdf' %}?degree={{ selected_degree }}&status={{ selected_status }}&graduation_year_min={{ selected_graduation_year_min }}&graduation_year_max={{ selected_graduation_year_max }}" class="btn-primary" style="background: #28a745;">
+                    <i class="fas fa-file-pdf"></i> Download PDF
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <div class="stat-label">Total Alumni</div>
+            <div class="stat-value">{{ total_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Active</div>
+            <div class="stat-value">{{ alumni|dictsort:"status"|length }}</div>
+        </div>
+    </div>
+    
+    <!-- Report Table -->
+    {% if alumni %}
+        <div class="report-table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Degree</th>
+                        <th>Field of Study</th>
+                        <th>Graduation Year</th>
+                        <th>Current Company</th>
+                        <th>Job Title</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alumnus in alumni %}
+                        <tr>
+                            <td>
+                                <strong>{{ alumnus.first_name }} {{ alumnus.last_name }}</strong>
+                            </td>
+                            <td>
+                                <a href="mailto:{{ alumnus.email }}">{{ alumnus.email }}</a>
+                            </td>
+                            <td>{{ alumnus.get_degree_display }}</td>
+                            <td>{{ alumnus.field_of_study }}</td>
+                            <td>{{ alumnus.graduation_year }}</td>
+                            <td>{{ alumnus.current_company|default:"—" }}</td>
+                            <td>{{ alumnus.job_title|default:"—" }}</td>
+                            <td>
+                                {% if alumnus.status == 'active' %}
+                                    <span class="badge badge-active">Active</span>
+                                {% elif alumnus.status == 'inactive' %}
+                                    <span class="badge badge-inactive">Inactive</span>
+                                {% else %}
+                                    <span class="badge badge-lost">Lost Contact</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-message">
+            <i class="fas fa-inbox"></i>
+            <h5>No alumni found</h5>
+            <p>Try adjusting your filter criteria</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endif %}
+
+{% endblock %}

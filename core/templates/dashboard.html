@@ -140,28 +140,38 @@
                                 <i class="fas fa-users"></i> Browse Alumni
                             </a>
                         </div>
+                        {% if user.is_superuser %}
+                        <div class="col-md-6 mb-2" id="alumniReportBtn">
+                            <a href="/reports/alumni-summary/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-table"></i> Alumni Report
+                            </a>
+                        </div>
+                        {% else %}
                         <div class="col-md-6 mb-2">
                             <a href="/partners/" class="action-btn action-btn-primary w-100 text-center">
                                 <i class="fas fa-building"></i> View Partners
                             </a>
                         </div>
+                        {% endif %}
                     </div>
                     <div class="row">
+                        {% if user.is_superuser %}
+                        <div class="col-md-6 mb-2">
+                            <a href="/partners/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-building"></i> View Partners
+                            </a>
+                        </div>
+                        {% endif %}
                         <div class="col-md-6 mb-2">
                             <a href="/engagements/" class="action-btn action-btn-primary w-100 text-center">
                                 <i class="fas fa-handshake"></i> View Engagements
                             </a>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-2">
                             <a href="/analytics/" class="action-btn action-btn-primary w-100 text-center">
                                 <i class="fas fa-chart-bar"></i> Analytics
-                            </a>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12 mb-2" id="profileCreateAction" style="display: none;">
-                            <a href="/profile/create/" class="action-btn action-btn-primary w-100 text-center">
-                                <i class="fas fa-user-check"></i> Create Alumni Profile
                             </a>
                         </div>
                     </div>
@@ -296,6 +306,16 @@ async function loadUserProfile(token) {
 
         // Update account info
         updateAccountInfo(user);
+
+        // Show/hide the Alumni Report button based on is_superuser or is_staff
+        const alumniReportButton = document.getElementById('alumniReportBtn');
+        if (alumniReportButton) {
+            if (user.is_superuser || user.is_staff) {
+                alumniReportButton.style.display = '';
+            } else {
+                alumniReportButton.style.display = 'none';
+            }
+        }
 
         // Show or hide the Resources card depending on admin status
         const resourcesCard = document.getElementById('resourcesCard');

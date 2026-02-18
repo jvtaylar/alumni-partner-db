@@ -140,7 +140,7 @@ if (!localStorage.getItem('authToken')) window.location.href = '/login/';
     </div>
     
     <!-- Reports -->
-    <div class="row">
+    <div class="row" id="reportCardContainer">
         <div class="col-lg-12">
             <div class="metric-card report-card">
                 <h5 class="mb-3">Generate Report</h5>
@@ -177,7 +177,42 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadAnalytics() {
     const token = localStorage.getItem('authToken');
     
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+    
     try {
+        // First, fetch current user to check if superuser
+        const userResponse = await fetch('/auth/user/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token
+            }
+        });
+        
+        if (!userResponse.ok) {
+            if (userResponse.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login/';
+            }
+            return;
+        }
+        
+        const userData = await userResponse.json();
+        const user = userData.user;
+        
+        // Show/hide report card based on is_superuser or is_staff
+        const reportCardContainer = document.getElementById('reportCardContainer');
+        if (reportCardContainer) {
+            if (user.is_superuser || user.is_staff) {
+                reportCardContainer.style.display = '';
+            } else {
+                reportCardContainer.style.display = 'none';
+            }
+        }
+        
         // Load all data
         const [alumniRes, partnersRes, engagementsRes] = await Promise.all([
             fetch('/api/alumni/?page_size=1', { headers: token ? { 'Authorization': 'Token ' + token } : {} }),

@@ -1,7 +1,7 @@
 from django.urls import path, include
 from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
-from .views import AlumniViewSet, PartnerViewSet, EngagementViewSet, ReportViewSet, landing_page, dashboard_view
+from .views import AlumniViewSet, PartnerViewSet, EngagementViewSet, ReportViewSet, landing_page, dashboard_view, alumni_summary_report, analytics_view, alumni_summary_report_pdf
 from .auth_views import (
     alumni_register, alumni_login, alumni_logout, current_user,
     AlumniSelfProfileViewSet
@@ -17,6 +17,8 @@ router.register(r'my-profile', AlumniSelfProfileViewSet, basename='my-profile')
 urlpatterns = [
     path('', landing_page, name='landing'),
     path('dashboard/', dashboard_view, name='dashboard'),
+    path('reports/alumni-summary/', alumni_summary_report, name='alumni-summary-report'),
+    path('reports/alumni-summary/pdf/', alumni_summary_report_pdf, name='alumni-summary-report-pdf'),
     
     # Web Pages
     path('register/', TemplateView.as_view(template_name='register.html'), name='register-page'),
@@ -25,7 +27,7 @@ urlpatterns = [
     path('alumni/', TemplateView.as_view(template_name='alumni-list.html'), name='alumni-list'),
     path('partners/', TemplateView.as_view(template_name='partners-list.html'), name='partners-list'),
     path('engagements/', TemplateView.as_view(template_name='engagements.html'), name='engagements'),
-    path('analytics/', TemplateView.as_view(template_name='analytics.html'), name='analytics'),
+    path('analytics/', analytics_view, name='analytics'),
     
     # Authentication endpoints
     path('auth/register/', alumni_register, name='alumni-register'),
