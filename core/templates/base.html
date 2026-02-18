@@ -415,7 +415,13 @@
                     
                     // Show Admin Dashboard only for staff/superuser
                     if (adminDashboardLink) {
-                        adminDashboardLink.style.display = (data.is_staff || data.is_superuser) ? 'block' : 'none';
+                        const isAdmin = data.is_staff || data.is_superuser;
+                        adminDashboardLink.style.display = isAdmin ? 'block' : 'none';
+                        console.log('User admin status:', { 
+                            is_staff: data.is_staff, 
+                            is_superuser: data.is_superuser,
+                            showAdminLink: isAdmin 
+                        });
                     }
                 }
             } catch (error) {

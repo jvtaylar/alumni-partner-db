@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Fetch current user data
+    // Fetch current user data and check if admin
     loadUserProfile(token);
 });
 
@@ -292,6 +292,13 @@ async function loadUserProfile(token) {
         
         // The response has a 'user' property with the actual user data
         const user = response_data.user;
+        
+        // Redirect admin users to admin dashboard
+        if (user.is_staff || user.is_superuser) {
+            console.log('Admin user detected, redirecting to admin dashboard...');
+            window.location.href = '/admin-dashboard/';
+            return;
+        }
         
         console.log('User data:', user);
         console.log('First name:', user.first_name, 'Type:', typeof user.first_name, 'Trimmed:', user.first_name ? user.first_name.trim() : 'N/A');

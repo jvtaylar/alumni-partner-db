@@ -3,7 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from .models import Alumni, Partner, Engagement, Report
@@ -105,7 +106,8 @@ def _report_lines(report):
 
 
 def landing_page(request):
-    """Landing page view with statistics"""
+    """Landing page view - common landing page for all users (no redirects)"""
+    # Show landing page for all users - they can choose to login, register, or continue browsing
     alumni_count = Alumni.objects.count()
     partner_count = Partner.objects.count()
     engagement_count = Engagement.objects.count()
@@ -118,23 +120,29 @@ def landing_page(request):
     return render(request, 'index.html', context)
 
 
-@login_required
 def dashboard_view(request):
-    """Dashboard view for authenticated users"""
-    # For API token auth, we need to validate the token
-    user = request.user
+    """Dashboard view for authenticated regular users - redirects admins to admin dashboard"""
+    from django.shortcuts import redirect
     
-    # If user is not authenticated via session, check for token auth
-    if not user.is_authenticated:
-        from rest_framework.authtoken.models import Token
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if auth_header.startswith('Token '):
-            token_key = auth_header.split(' ')[1]
-            try:
-                token = Token.objects.get(key=token_key)
-                user = token.user
-            except Token.DoesNotExist:
-                pass
+    # Resolve user with token auth taking priority over session
+    user = request.user
+    from rest_framework.authtoken.models import Token
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header.startswith('Token '):
+        token_key = auth_header.split(' ')[1]
+        try:
+            token = Token.objects.get(key=token_key)
+            user = token.user
+        except Token.DoesNotExist:
+            pass
+    
+    # Redirect ONLY admin users to admin dashboard
+    if user.is_authenticated and (user.is_staff or user.is_superuser):
+        print(f"DEBUG: Admin user {user.username} detected in dashboard_view, redirecting to admin-dashboard")
+        return redirect('/admin-dashboard/')
+    
+    # For regular users, continue to render dashboard
+    print(f"DEBUG: Regular user {user.username if user.is_authenticated else 'anonymous'} accessing dashboard_view")
     
     alumni = None
     if user.is_authenticated:
@@ -780,7 +788,28 @@ def alumni_summary_report_pdf(request):
 
 # Admin Dashboard Views
 def admin_dashboard_view(request):
-    """Render the admin dashboard template"""
+    """Render the admin dashboard template - admin users only"""
+    from rest_framework.authtoken.models import Token
+
+    # Resolve user with token auth taking priority over session
+    user = request.user
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header.startswith('Token '):
+        token_key = auth_header.split(' ')[1]
+        try:
+            token = Token.objects.get(key=token_key)
+            user = token.user
+        except Token.DoesNotExist:
+            pass
+    
+    # Redirect to login if not authenticated
+    if not user.is_authenticated:
+        return redirect('login-page')
+    
+    # Redirect non-admin users to regular dashboard
+    if not (user.is_staff or user.is_superuser):
+        return redirect('/dashboard/')
+    
     return render(request, 'admin-dashboard.html')
 
 

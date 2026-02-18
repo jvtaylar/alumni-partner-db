@@ -3,12 +3,44 @@
 {% block title %}Admin Dashboard - Alumni Partner Connect{% endblock %}
 
 {% block content %}
+<!-- Admin-only content protection -->
+<style>
+    .admin-dashboard-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+</style>
+
 <div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4"><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+    <!-- Loading state - shown initially while checking permissions -->
+    <div id="adminDashboardLoading" class="admin-dashboard-loading">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Verifying permissions...</p>
         </div>
     </div>
+
+    <!-- Admin Access Error Messages -->
+    <div id="adminAccessError"></div>
+    
+    <div id="adminDashboardContent" style="display: none;">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                    <h1 class="mb-2 mb-md-0"><i class="fas fa-user-shield"></i> Admin Dashboard</h1>
+                    <div class="d-flex align-items-center gap-3">
+                        <small class="text-muted" id="dashboardLastUpdated">Last updated: --</small>
+                        <button class="btn btn-outline-primary btn-sm" type="button" id="refreshDashboardBtn">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <!-- Quick Stats -->
     <div class="row mb-4">
@@ -49,7 +81,17 @@
     <!-- Tabs for different admin sections -->
     <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="bulk-ops-tab" data-bs-toggle="tab" data-bs-target="#bulk-ops" type="button" role="tab">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fas fa-chart-line"></i> Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
+                <i class="fas fa-chart-pie"></i> Analytics
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="bulk-ops-tab" data-bs-toggle="tab" data-bs-target="#bulk-ops" type="button" role="tab">
                 <i class="fas fa-tasks"></i> Bulk Operations
             </button>
         </li>
@@ -73,8 +115,198 @@
     <!-- Tab Content -->
     <div class="tab-content" id="adminTabContent">
         
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-user-graduate"></i> Alumni Status Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="alumniStatusChart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-building"></i> Partner Engagement Levels</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="partnerLevelChart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Degrees Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="degreeStats" style="max-height: 300px; overflow-y: auto;">
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-activity"></i> System Status</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="systemStatus" style="max-height: 300px; overflow-y: auto;">
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-list"></i> Quick Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <h6>Active Alumni</h6>
+                                    <h3 id="activeAlumniCount" class="text-success">0</h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Inactive Alumni</h6>
+                                    <h3 id="inactiveAlumniCount" class="text-warning">0</h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Gold Partners</h6>
+                                    <h3 id="goldPartnerCount" class="text-info">0</h3>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Active Users</h6>
+                                    <h3 id="activeUserCount" class="text-primary">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div class="tab-pane fade" id="analytics" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="text-muted small">Total Alumni</div>
+                            <div class="fs-3 fw-bold" id="adminTotalAlumni">-</div>
+                            <div class="text-muted small">Active members</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="text-muted small">Partner Organizations</div>
+                            <div class="fs-3 fw-bold" id="adminTotalPartners">-</div>
+                            <div class="text-muted small">Active partners</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="text-muted small">Total Engagements</div>
+                            <div class="fs-3 fw-bold" id="adminTotalEngagements">-</div>
+                            <div class="text-muted small">Recorded interactions</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="text-muted small">Engagement Rate</div>
+                            <div class="fs-3 fw-bold" id="adminEngagementRate">-</div>
+                            <div class="text-muted small">Per alumni</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-handshake"></i> Engagements by Type</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="adminEngagementTypeChart" style="max-height: 280px;"></canvas>
+                            <div id="adminEngagementTypeList" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-star"></i> Top Engagement Partners</h5>
+                        </div>
+                        <div class="card-body" id="adminTopPartners"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-user-graduate"></i> Alumni by Status</h5>
+                        </div>
+                        <div class="card-body" id="adminAlumniByStatus"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Alumni by Degree</h5>
+                        </div>
+                        <div class="card-body" id="adminAlumniByDegree"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-industry"></i> Industries Represented</h5>
+                        </div>
+                        <div class="card-body" id="adminTopIndustries"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0"><i class="fas fa-file-alt"></i> Recent Reports</h5>
+                        </div>
+                        <div class="card-body" id="adminRecentReports">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Bulk Operations Tab -->
-        <div class="tab-pane fade show active" id="bulk-ops" role="tabpanel">
+        <div class="tab-pane fade" id="bulk-ops" role="tabpanel">
             <div class="row">
                 <div class="col-md-6 mb-4">
                     <div class="card">
@@ -251,41 +483,218 @@
         </div>
     </div>
 </div>
+</div><!-- Close adminDashboardContent -->
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
 const API_BASE = '';
 let currentUser = null;
+let alumniStatusChart = null;
+let partnerLevelChart = null;
+let adminEngagementTypeChart = null;
+let dashboardRefreshInterval = null;
 
 // Check admin access
 async function checkAdminAccess() {
     const token = localStorage.getItem('authToken');
+    console.log('Checking admin access with token:', token ? token.substring(0, 10) + '...' : 'NO TOKEN');
+    
     if (!token) {
+        console.warn('No token found in localStorage');
+        console.log('Redirecting to login page...');
         window.location.href = '/login/';
         return;
     }
 
     try {
         const response = await fetch('/auth/user/', {
+            method: 'GET',
             headers: {
-                'Authorization': `Token ${token}`
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
             },
             credentials: 'omit'
         });
 
+        console.log('Auth response status:', response.status);
+
         if (response.ok) {
-            currentUser = await response.json();
-            if (!currentUser.is_staff && !currentUser.is_superuser) {
-                alert('Access denied. Admin privileges required.');
+            const data = await response.json();
+            console.log('Full response data:', data);
+            
+            // Make sure we're accessing the user object correctly
+            const user = data.user || data;
+            console.log('User object:', user);
+            console.log('User is_staff:', user.is_staff, 'is_superuser:', user.is_superuser);
+            
+            currentUser = user;
+            
+            if (!user.is_staff && !user.is_superuser) {
+                console.error('User does not have admin privileges');
+                console.warn('Redirecting to dashboard...');
                 window.location.href = '/dashboard/';
                 return;
             }
+            
+            // User has admin access
+            console.log('✓ Admin access granted');
+            
+            // Show admin dashboard content
+            document.getElementById('adminDashboardLoading').style.display = 'none';
+            document.getElementById('adminDashboardContent').style.display = 'block';
+            
             loadDashboardData();
+            scheduleDashboardRefresh();
         } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Auth failed:', response.status, errorData);
+            console.log('Redirecting to login...');
+            localStorage.removeItem('authToken');
             window.location.href = '/login/';
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error checking admin access:', error);
+        console.log('Redirecting to login...');
         window.location.href = '/login/';
+    }
+}
+
+function updateLastUpdated() {
+    const lastUpdated = document.getElementById('dashboardLastUpdated');
+    if (lastUpdated) {
+        const now = new Date();
+        lastUpdated.textContent = `Last updated: ${now.toLocaleString()}`;
+    }
+}
+
+function scheduleDashboardRefresh() {
+    if (dashboardRefreshInterval) {
+        return;
+    }
+    const refreshBtn = document.getElementById('refreshDashboardBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshDashboard);
+    }
+    dashboardRefreshInterval = setInterval(() => {
+        loadDashboardData();
+    }, 60000);
+}
+
+async function refreshDashboard() {
+    const refreshBtn = document.getElementById('refreshDashboardBtn');
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+    }
+
+    try {
+        setDashboardLoadingState();
+        await loadDashboardData();
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        }
+    }
+}
+
+function setDashboardLoadingState() {
+    const textIds = [
+        'totalAlumni',
+        'totalPartners',
+        'totalEngagements',
+        'totalUsers',
+        'activeAlumniCount',
+        'inactiveAlumniCount',
+        'goldPartnerCount',
+        'activeUserCount'
+    ];
+    textIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = '…';
+        }
+    });
+
+    const analyticsIds = [
+        'adminTotalAlumni',
+        'adminTotalPartners',
+        'adminTotalEngagements',
+        'adminEngagementRate'
+    ];
+    analyticsIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = '…';
+        }
+    });
+
+    const degreeStats = document.getElementById('degreeStats');
+    if (degreeStats) {
+        degreeStats.innerHTML = 'Loading...';
+    }
+
+    const systemStatus = document.getElementById('systemStatus');
+    if (systemStatus) {
+        systemStatus.innerHTML = 'Loading...';
+    }
+
+    const alumniCount = document.getElementById('alumniCount');
+    if (alumniCount) {
+        alumniCount.textContent = 'Loading...';
+    }
+
+    const partnerCount = document.getElementById('partnerCount');
+    if (partnerCount) {
+        partnerCount.textContent = 'Loading...';
+    }
+
+    const auditBody = document.getElementById('auditLogsBody');
+    if (auditBody) {
+        auditBody.innerHTML = '<tr><td colspan="4" class="text-center">Loading audit logs...</td></tr>';
+    }
+
+    const usersBody = document.getElementById('usersTableBody');
+    if (usersBody) {
+        usersBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading users...</td></tr>';
+    }
+
+    const engagementList = document.getElementById('adminEngagementTypeList');
+    if (engagementList) {
+        engagementList.innerHTML = 'Loading...';
+    }
+    const topPartners = document.getElementById('adminTopPartners');
+    if (topPartners) {
+        topPartners.innerHTML = 'Loading...';
+    }
+    const alumniStatus = document.getElementById('adminAlumniByStatus');
+    if (alumniStatus) {
+        alumniStatus.innerHTML = 'Loading...';
+    }
+    const alumniDegree = document.getElementById('adminAlumniByDegree');
+    if (alumniDegree) {
+        alumniDegree.innerHTML = 'Loading...';
+    }
+    const industries = document.getElementById('adminTopIndustries');
+    if (industries) {
+        industries.innerHTML = 'Loading...';
+    }
+    const reports = document.getElementById('adminRecentReports');
+    if (reports) {
+        reports.innerHTML = 'Loading...';
+    }
+
+    if (alumniStatusChart) {
+        alumniStatusChart.destroy();
+        alumniStatusChart = null;
+    }
+    if (partnerLevelChart) {
+        partnerLevelChart.destroy();
+        partnerLevelChart = null;
+    }
+    if (adminEngagementTypeChart) {
+        adminEngagementTypeChart.destroy();
+        adminEngagementTypeChart = null;
     }
 }
 
@@ -312,11 +721,461 @@ async function loadDashboardData() {
         document.getElementById('totalEngagements').textContent = engagements.length || 0;
         document.getElementById('totalUsers').textContent = users.length || 0;
 
+        // Analyze data for charts
+        analyzeAlumniData(alumni);
+        analyzePartnerData(partners);
+        analyzeDegreeData(alumni);
+        updateSystemStatus(alumni, partners, users);
         updateBulkOperationCounts(alumni, partners);
-        loadAuditLogs();
-        loadUsers();
+        document.getElementById('activeUserCount').textContent = users.filter(u => u.is_active).length;
+        await Promise.all([
+            loadAuditLogs(),
+            loadUsers(),
+            loadAnalyticsSnapshot(),
+            loadRecentReports()
+        ]);
+        updateLastUpdated();
     } catch (error) {
         console.error('Error loading dashboard data:', error);
+    }
+}
+
+function normalizeListResponse(data) {
+    if (Array.isArray(data)) {
+        return { count: data.length, results: data };
+    }
+    const results = Array.isArray(data.results) ? data.results : [];
+    const count = typeof data.count === 'number' ? data.count : results.length;
+    return { count, results };
+}
+
+async function loadAnalyticsSnapshot() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        return;
+    }
+
+    try {
+        const [alumniRes, partnersRes, engagementsRes] = await Promise.all([
+            fetch('/api/alumni/?page_size=1', { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' }),
+            fetch('/api/partners/?page_size=1', { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' }),
+            fetch('/api/engagements/?page_size=1', { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' })
+        ]);
+
+        const alumniMeta = normalizeListResponse(await alumniRes.json());
+        const partnerMeta = normalizeListResponse(await partnersRes.json());
+        const engagementMeta = normalizeListResponse(await engagementsRes.json());
+
+        const alumniPageSize = alumniMeta.count || 100;
+        const engagementPageSize = engagementMeta.count || 100;
+
+        const [alumniDetailRes, engagementsDetailRes] = await Promise.all([
+            fetch(`/api/alumni/?page_size=${alumniPageSize}`, { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' }),
+            fetch(`/api/engagements/?page_size=${engagementPageSize}`, { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' })
+        ]);
+
+        const alumniDetail = normalizeListResponse(await alumniDetailRes.json());
+        const engagementsDetail = normalizeListResponse(await engagementsDetailRes.json());
+
+        document.getElementById('adminTotalAlumni').textContent = alumniMeta.count || 0;
+        document.getElementById('adminTotalPartners').textContent = partnerMeta.count || 0;
+        document.getElementById('adminTotalEngagements').textContent = engagementMeta.count || 0;
+
+        const engagementRate = alumniMeta.count ? (engagementMeta.count / alumniMeta.count).toFixed(1) : '0';
+        document.getElementById('adminEngagementRate').textContent = engagementRate;
+
+        processAdminEngagementData(engagementsDetail.results);
+        processAdminAlumniData(alumniDetail.results);
+        processAdminTopPartners(engagementsDetail.results);
+    } catch (error) {
+        console.error('Error loading analytics snapshot:', error);
+    }
+}
+
+function processAdminEngagementData(engagements) {
+    const types = {};
+    engagements.forEach(e => {
+        if (!e.engagement_type) {
+            return;
+        }
+        types[e.engagement_type] = (types[e.engagement_type] || 0) + 1;
+    });
+
+    const ctx = document.getElementById('adminEngagementTypeChart');
+    if (ctx) {
+        if (adminEngagementTypeChart) {
+            adminEngagementTypeChart.destroy();
+        }
+        adminEngagementTypeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(types),
+                datasets: [{
+                    data: Object.values(types),
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+    }
+
+    let html = '<ul class="list-unstyled">';
+    Object.entries(types).forEach(([type, count]) => {
+        const percentage = engagements.length ? ((count / engagements.length) * 100).toFixed(1) : '0.0';
+        html += `
+            <li class="mb-2">
+                <div class="d-flex justify-content-between">
+                    <span><strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong></span>
+                    <span class="badge bg-primary">${count}</span>
+                </div>
+                <div class="progress" style="height: 5px;">
+                    <div class="progress-bar" style="width: ${percentage}%"></div>
+                </div>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    const list = document.getElementById('adminEngagementTypeList');
+    if (list) {
+        list.innerHTML = html;
+    }
+}
+
+function processAdminAlumniData(alumni) {
+    const statuses = {};
+    const degrees = {};
+    const industries = {};
+
+    alumni.forEach(a => {
+        if (a.status) {
+            statuses[a.status] = (statuses[a.status] || 0) + 1;
+        }
+        if (a.degree) {
+            degrees[a.degree] = (degrees[a.degree] || 0) + 1;
+        }
+        if (a.industry) {
+            industries[a.industry] = (industries[a.industry] || 0) + 1;
+        }
+    });
+
+    let html = '<ul class="list-unstyled">';
+    Object.entries(statuses).forEach(([status, count]) => {
+        html += `
+            <li class="mb-2">
+                <span class="badge ${status === 'active' ? 'bg-success' : 'bg-secondary'}">${status.toUpperCase()}</span>
+                <strong>${count}</strong> alumni
+            </li>
+        `;
+    });
+    html += '</ul>';
+    const statusContainer = document.getElementById('adminAlumniByStatus');
+    if (statusContainer) {
+        statusContainer.innerHTML = html;
+    }
+
+    html = '<ul class="list-unstyled">';
+    Object.entries(degrees).forEach(([degree, count]) => {
+        html += `
+            <li class="mb-2">
+                <i class="fas fa-graduation-cap"></i> <strong>${degree || 'Not specified'}</strong>: ${count}
+            </li>
+        `;
+    });
+    html += '</ul>';
+    const degreeContainer = document.getElementById('adminAlumniByDegree');
+    if (degreeContainer) {
+        degreeContainer.innerHTML = html;
+    }
+
+    html = '<div class="row">';
+    Object.entries(industries)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([industry, count]) => {
+            html += `
+                <div class="col-md-4 mb-2">
+                    <div class="card">
+                        <div class="card-body p-3">
+                            <p class="mb-0"><strong>${industry}</strong></p>
+                            <small class="text-muted">${count} alumni</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    html += '</div>';
+    const industriesContainer = document.getElementById('adminTopIndustries');
+    if (industriesContainer) {
+        industriesContainer.innerHTML = html;
+    }
+}
+
+function processAdminTopPartners(engagements) {
+    const partners = {};
+    engagements.forEach(e => {
+        const partnerName = e.partner_details?.name || 'Unknown';
+        partners[partnerName] = (partners[partnerName] || 0) + 1;
+    });
+
+    let html = '<ol class="list-group">';
+    Object.entries(partners)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .forEach(([name, count]) => {
+            html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    ${name}
+                    <span class="badge bg-primary rounded-pill">${count}</span>
+                </li>
+            `;
+        });
+    html += '</ol>';
+    const container = document.getElementById('adminTopPartners');
+    if (container) {
+        container.innerHTML = html;
+    }
+}
+
+async function loadRecentReports() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/reports/?page_size=5', {
+            headers: {
+                'Authorization': `Token ${token}`
+            },
+            credentials: 'omit'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load reports');
+        }
+
+        const data = await response.json();
+        const reportList = Array.isArray(data.results) ? data.results : data;
+        renderRecentReports(reportList);
+    } catch (error) {
+        console.error('Error loading recent reports:', error);
+        const container = document.getElementById('adminRecentReports');
+        if (container) {
+            container.innerHTML = '<div class="text-danger">Error loading reports</div>';
+        }
+    }
+}
+
+function renderRecentReports(reports) {
+    const container = document.getElementById('adminRecentReports');
+    if (!container) {
+        return;
+    }
+
+    if (!reports || reports.length === 0) {
+        container.innerHTML = '<div class="text-muted">No reports found.</div>';
+        return;
+    }
+
+    let html = '<ul class="list-group">';
+    reports.forEach(report => {
+        const createdAt = report.created_at ? new Date(report.created_at).toLocaleString() : 'Unknown date';
+        const reportType = report.report_type ? report.report_type.replace(/_/g, ' ') : 'report';
+        const generatedBy = report.generated_by_username || report.generated_by || 'System';
+        html += `
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-semibold">${report.title || 'Untitled report'}</div>
+                        <small class="text-muted">${reportType} · ${generatedBy}</small>
+                    </div>
+                    <small class="text-muted">${createdAt}</small>
+                </div>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+// Analyze alumni status distribution
+function analyzeAlumniData(alumni) {
+    const statusCounts = {
+        'active': 0,
+        'inactive': 0,
+        'lost_contact': 0
+    };
+    
+    alumni.forEach(a => {
+        const status = a.status || 'inactive';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    document.getElementById('activeAlumniCount').textContent = statusCounts.active;
+    document.getElementById('inactiveAlumniCount').textContent = statusCounts.inactive + statusCounts.lost_contact;
+
+    // Create alumni status chart
+    const ctx = document.getElementById('alumniStatusChart');
+    if (ctx) {
+        if (alumniStatusChart) {
+            alumniStatusChart.destroy();
+        }
+        
+        alumniStatusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Active', 'Inactive', 'Lost Contact'],
+                datasets: [{
+                    data: [statusCounts.active, statusCounts.inactive, statusCounts.lost_contact],
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
+                    borderColor: ['#fff', '#fff', '#fff'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Analyze partner engagement levels
+function analyzePartnerData(partners) {
+    const levelCounts = {
+        'gold': 0,
+        'silver': 0,
+        'bronze': 0,
+        'prospective': 0
+    };
+    
+    partners.forEach(p => {
+        const level = p.engagement_level || 'prospective';
+        levelCounts[level] = (levelCounts[level] || 0) + 1;
+    });
+
+    document.getElementById('goldPartnerCount').textContent = levelCounts.gold;
+
+    // Create partner level chart
+    const ctx = document.getElementById('partnerLevelChart');
+    if (ctx) {
+        if (partnerLevelChart) {
+            partnerLevelChart.destroy();
+        }
+        
+        partnerLevelChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Gold', 'Silver', 'Bronze', 'Prospective'],
+                datasets: [{
+                    label: 'Number of Partners',
+                    data: [levelCounts.gold, levelCounts.silver, levelCounts.bronze, levelCounts.prospective],
+                    backgroundColor: ['#FFD700', '#C0C0C0', '#CD7F32', '#6c757d'],
+                    borderColor: ['#DAA520', '#A9A9A9', '#8B4513', '#495057'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'x',
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Analyze degree distribution
+function analyzeDegreeData(alumni) {
+    const degreeCounts = {};
+    
+    alumni.forEach(a => {
+        const degree = a.degree || 'Unknown';
+        degreeCounts[degree] = (degreeCounts[degree] || 0) + 1;
+    });
+
+    const statsDiv = document.getElementById('degreeStats');
+    if (statsDiv) {
+        let html = '<div class="list-group">';
+        Object.entries(degreeCounts)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([degree, count]) => {
+                const percentage = Math.round((count / alumni.length) * 100);
+                html += `<div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>${degree}</span>
+                        <span class="badge bg-primary">${count} (${percentage}%)</span>
+                    </div>
+                    <div class="progress mt-2" style="height: 5px;">
+                        <div class="progress-bar" style="width: ${percentage}%"></div>
+                    </div>
+                </div>`;
+            });
+        html += '</div>';
+        statsDiv.innerHTML = html;
+    }
+}
+
+// Update system status
+function updateSystemStatus(alumni, partners, users) {
+    const statusDiv = document.getElementById('systemStatus');
+    if (statusDiv) {
+        const activeUsers = users.filter(u => u.is_active).length;
+        const activeAlumni = alumni.filter(a => a.status === 'active').length;
+        const goldPartners = partners.filter(p => p.engagement_level === 'gold').length;
+        
+        const html = `
+            <div class="list-group">
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-check-circle text-success"></i> System Status</span>
+                        <span class="badge bg-success">Operational</span>
+                    </div>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-database"></i> Total Records</span>
+                        <span class="badge bg-info">${alumni.length + partners.length}</span>
+                    </div>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-users"></i> Active Users</span>
+                        <span class="badge bg-primary">${activeUsers}</span>
+                    </div>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-chart-pie"></i> Engagement Rate</span>
+                        <span class="badge bg-warning text-dark">${activeAlumni > 0 ? Math.round((activeAlumni / alumni.length) * 100) : 0}%</span>
+                    </div>
+                </div>
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-star"></i> Gold Partners</span>
+                        <span class="badge bg-warning">${goldPartners}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        statusDiv.innerHTML = html;
     }
 }
 

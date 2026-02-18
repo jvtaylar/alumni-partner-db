@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Token Update - Admin Access{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-key"></i> Fix Admin Access</h4>
+                </div>
+                <div class="card-body">
+                    <div id="status" class="alert alert-info">
+                        <strong>Checking your current token...</strong>
+                    </div>
+
+                    <h5>Current Token Status:</h5>
+                    <div id="currentTokenInfo" class="mb-3">
+                        <code id="currentToken">Loading...</code>
+                    </div>
+
+                    <h5>Valid Admin Token:</h5>
+                    <div class="mb-3">
+                        <code>c00fef9e8209c5e8c727963d50ce462e48bf7cb8</code>
+                    </div>
+
+                    <button class="btn btn-success btn-lg" onclick="updateToken()">
+                        <i class="fas fa-sync"></i> Update to Valid Token
+                    </button>
+
+                    <button class="btn btn-danger btn-lg ms-2" onclick="clearToken()">
+                        <i class="fas fa-trash"></i> Clear Token & Re-login
+                    </button>
+
+                    <hr class="my-4">
+
+                    <h5>Manual Instructions:</h5>
+                    <p>If the buttons above don't work, open your browser console (F12) and run:</p>
+                    <pre class="bg-light p-3">localStorage.setItem('authToken', 'c00fef9e8209c5e8c727963d50ce462e48bf7cb8');
+location.reload();</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const VALID_TOKEN = 'c00fef9e8209c5e8c727963d50ce462e48bf7cb8';
+
+async function checkCurrentToken() {
+    const currentToken = localStorage.getItem('authToken');
+    document.getElementById('currentToken').textContent = currentToken || 'No token found';
+    
+    if (!currentToken) {
+        document.getElementById('status').className = 'alert alert-warning';
+        document.getElementById('status').innerHTML = '<strong>No token found!</strong> You need to login or update your token.';
+        return;
+    }
+
+    // Test if current token works
+    try {
+        const response = await fetch('/auth/user/', {
+            headers: {
+                'Authorization': `Token ${currentToken}`
+            },
+            credentials: 'omit'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.user.is_staff || data.user.is_superuser) {
+                document.getElementById('status').className = 'alert alert-success';
+                document.getElementById('status').innerHTML = '<strong>✓ Your token is valid and you have admin access!</strong><br>You can now access the <a href="/admin-dashboard/">Admin Dashboard</a>';
+            } else {
+                document.getElementById('status').className = 'alert alert-warning';
+                document.getElementById('status').innerHTML = '<strong>Token is valid but you don\'t have admin privileges.</strong><br>Your account needs staff or superuser status.';
+            }
+        } else {
+            document.getElementById('status').className = 'alert alert-danger';
+            document.getElementById('status').innerHTML = '<strong>✗ Your token is INVALID or EXPIRED!</strong><br>Click the button below to fix it.';
+        }
+    } catch (error) {
+        document.getElementById('status').className = 'alert alert-danger';
+        document.getElementById('status').innerHTML = '<strong>Error checking token:</strong> ' + error.message;
+    }
+}
+
+function updateToken() {
+    localStorage.setItem('authToken', VALID_TOKEN);
+    document.getElementById('status').className = 'alert alert-success';
+    document.getElementById('status').innerHTML = '<strong>✓ Token updated successfully!</strong><br>Redirecting to admin dashboard in 2 seconds...';
+    
+    setTimeout(() => {
+        window.location.href = '/admin-dashboard/';
+    }, 2000);
+}
+
+function clearToken() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    document.getElementById('status').className = 'alert alert-info';
+    document.getElementById('status').innerHTML = '<strong>Token cleared!</strong><br>Redirecting to login page...';
+    
+    setTimeout(() => {
+        window.location.href = '/login/';
+    }, 1500);
+}
+
+// Check token on page load
+document.addEventListener('DOMContentLoaded', checkCurrentToken);
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Access Test{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Admin Access Test</h1>
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5>User Information</h5>
+            <div id="userInfo">Loading...</div>
+            
+            <hr class="my-4">
+            
+            <h5>Admin Dashboard Access</h5>
+            <p>Click the button below to test access to the admin dashboard:</p>
+            <a href="/admin-dashboard/" class="btn btn-primary">Go to Admin Dashboard</a>
+            
+            <hr class="my-4">
+            
+            <h5>Instructions</h5>
+            <ol>
+                <li>Make sure you're logged in</li>
+                <li>Your account must have <strong>is_staff=True</strong> or <strong>is_superuser=True</strong></li>
+                <li>Check the console (F12) for debugging information</li>
+            </ol>
+            
+            <div class="alert alert-info mt-3">
+                <strong>Not an admin?</strong> Create a superuser account:
+                <pre class="mb-0">python manage.py createsuperuser</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadUserInfo() {
+    const token = localStorage.getItem('authToken');
+    const infoDiv = document.getElementById('userInfo');
+    
+    if (!token) {
+        infoDiv.innerHTML = '<div class="alert alert-warning">Not logged in. <a href="/login/">Login here</a></div>';
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/user/', {
+            headers: {
+                'Authorization': `Token ${token}`
+            },
+            credentials: 'omit'
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            console.log('User data:', user);
+            
+            const isAdmin = user.is_staff || user.is_superuser;
+            const statusClass = isAdmin ? 'success' : 'warning';
+            
+            infoDiv.innerHTML = `
+                <table class="table table-sm">
+                    <tr>
+                        <th>Username:</th>
+                        <td>${user.username}</td>
+                    </tr>
+                    <tr>
+                        <th>Email:</th>
+                        <td>${user.email || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <th>Staff Status:</th>
+                        <td><span class="badge bg-${user.is_staff ? 'success' : 'secondary'}">${user.is_staff ? 'Yes' : 'No'}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Superuser Status:</th>
+                        <td><span class="badge bg-${user.is_superuser ? 'success' : 'secondary'}">${user.is_superuser ? 'Yes' : 'No'}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Admin Dashboard Access:</th>
+                        <td><span class="badge bg-${statusClass}">${isAdmin ? 'GRANTED ✓' : 'DENIED ✗'}</span></td>
+                    </tr>
+                </table>
+                
+                ${!isAdmin ? '<div class="alert alert-warning mt-3">Your account does not have admin privileges. Contact an administrator to grant you staff or superuser status.</div>' : ''}
+            `;
+        } else {
+            infoDiv.innerHTML = '<div class="alert alert-danger">Error loading user information. Please login again.</div>';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        infoDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadUserInfo);
+</script>
+{% endblock %}

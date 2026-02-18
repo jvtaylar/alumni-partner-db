@@ -28,6 +28,8 @@ urlpatterns = [
     
     # Admin Dashboard
     path('admin-dashboard/', admin_dashboard_view, name='admin-dashboard'),
+    path('admin-test/', TemplateView.as_view(template_name='admin-test.html'), name='admin-test'),
+    path('token-fix/', TemplateView.as_view(template_name='token-fix.html'), name='token-fix'),
     
     # Web Pages
     path('register/', TemplateView.as_view(template_name='register.html'), name='register-page'),

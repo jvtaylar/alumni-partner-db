@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from .auth_serializers import (
     UserRegistrationSerializer,
@@ -14,6 +15,7 @@ from .models import Alumni
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def alumni_register(request):
     """Register a new user account (no alumni profile yet)"""
     serializer = UserRegistrationSerializer(data=request.data)
@@ -38,16 +40,49 @@ def alumni_register(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def alumni_login(request):
     """Login alumni and return authentication token"""
     serializer = UserLoginSerializer(data=request.data)
     if serializer.is_valid():
-        username = serializer.validated_data['username']
+        username = serializer.validated_data['username'].strip()
         password = serializer.validated_data['password']
         
+        # Allow login with email or username
         user = authenticate(username=username, password=password)
+        if user is None:
+            try:
+                username_user = User.objects.get(username__iexact=username)
+                user = authenticate(username=username_user.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+        if user is None and '@' in username:
+            try:
+                email_user = User.objects.get(email__iexact=username)
+                user = authenticate(username=email_user.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+        if user is None:
+            password_trimmed = password.strip()
+            if password_trimmed:
+                try:
+                    fallback_user = User.objects.get(username__iexact=username)
+                except User.DoesNotExist:
+                    fallback_user = None
+
+                if fallback_user is None and '@' in username:
+                    try:
+                        fallback_user = User.objects.get(email__iexact=username)
+                    except User.DoesNotExist:
+                        fallback_user = None
+
+                if fallback_user and fallback_user.is_active and fallback_user.check_password(password_trimmed):
+                    user = fallback_user
         
         if user is not None:
+            login(request, user)
             token, created = Token.objects.get_or_create(user=user)
             
             # Get or create alumni profile
@@ -68,32 +103,34 @@ def alumni_login(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def alumni_logout(request):
     """Logout alumni and delete token"""
     if request.user.is_authenticated:
-        try:
-            token = Token.objects.get(user=request.user)
-            token.delete()
-            return Response({
-                'message': 'Logout successful'
-            }, status=status.HTTP_200_OK)
-        except Token.DoesNotExist:
-            return Response({
-                'error': 'Token not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-    
+        logout(request)
+
     return Response({
-        'error': 'Not authenticated'
-    }, status=status.HTTP_401_UNAUTHORIZED)
+        'message': 'Logout successful'
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
 def current_user(request):
     """Get current authenticated user details"""
-    if request.user.is_authenticated:
-        user = request.user
+    # Resolve user with token auth taking priority over session
+    user = request.user
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if auth_header.startswith('Token '):
+        token_key = auth_header.split(' ')[1]
+        try:
+            token = Token.objects.get(key=token_key)
+            user = token.user
+        except Token.DoesNotExist:
+            user = None
+
+    if user is not None and user.is_authenticated:
         alumni = Alumni.objects.filter(user=user).first()
-        
+
         return Response({
             'user': UserProfileSerializer(user).data,
             'alumni': AlumniProfileSerializer(alumni).data if alumni else None,
