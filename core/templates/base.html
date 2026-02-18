@@ -370,9 +370,9 @@
                     <li class="nav-item" id="partnersLink" style="display: none;"><a class="nav-link" href="/partners/">Partners</a></li>
                     <li class="nav-item" id="engagementsLink" style="display: none;"><a class="nav-link" href="/engagements/">Engagements</a></li>
                     <li class="nav-item" id="analyticsLink" style="display: none;"><a class="nav-link" href="/analytics/">Analytics</a></li>
-                    <li class="nav-item" id="adminDashboardLink" style="display: none;"><a class="nav-link" href="/admin-dashboard/"><i class="fas fa-user-shield"></i> Admin</a></li>
                     <li class="nav-item" id="dashboardLink" style="display: none;"><a class="nav-link" href="/dashboard/">Dashboard</a></li>
                     <li class="nav-item" id="profileCreateLink" style="display: none;"><a class="nav-link" href="/profile/create/">Create Profile</a></li>
+                    <li class="nav-item" id="profileSettingsLink" style="display: none;"><a class="nav-link" href="/profile/settings/">Profile Settings</a></li>
                     <li class="nav-item" id="logoutBtn" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
                     <li class="nav-item" id="loginLink"><a class="nav-link" href="/login/">Login</a></li>
                 </ul>
@@ -384,10 +384,9 @@
     // Update navigation based on login status
     async function updateNavigation() {
         const token = localStorage.getItem('authToken');
-        const links = ['alumniLink', 'partnersLink', 'engagementsLink', 'analyticsLink', 'dashboardLink', 'logoutBtn'];
+        const links = ['alumniLink', 'partnersLink', 'engagementsLink', 'analyticsLink', 'dashboardLink', 'logoutBtn', 'profileSettingsLink'];
         const loginLink = 'loginLink';
         const profileCreateLink = document.getElementById('profileCreateLink');
-        const adminDashboardLink = document.getElementById('adminDashboardLink');
         
         if (token) {
             // User is logged in
@@ -407,26 +406,23 @@
                 });
                 if (response.ok) {
                     const data = await response.json();
+                    const user = data.user || data;
                     
                     // Show Create Profile only if user has no alumni profile
                     if (profileCreateLink) {
                         profileCreateLink.style.display = data.alumni ? 'none' : 'block';
                     }
                     
-                    // Show Admin Dashboard only for staff/superuser
-                    if (adminDashboardLink) {
-                        const isAdmin = data.is_staff || data.is_superuser;
-                        adminDashboardLink.style.display = isAdmin ? 'block' : 'none';
-                        console.log('User admin status:', { 
-                            is_staff: data.is_staff, 
-                            is_superuser: data.is_superuser,
-                            showAdminLink: isAdmin 
-                        });
+
+                    // Hide Analytics link for admin users only
+                    const analyticsLink = document.getElementById('analyticsLink');
+                    if (analyticsLink) {
+                        const isAdmin = user.is_staff || user.is_superuser;
+                        analyticsLink.style.display = isAdmin ? 'none' : 'block';
                     }
                 }
             } catch (error) {
                 // If request fails, keep admin link hidden
-                if (adminDashboardLink) adminDashboardLink.style.display = 'none';
             }
         } else {
             // User is not logged in
@@ -437,7 +433,6 @@
             const elem = document.getElementById(loginLink);
             if (elem) elem.style.display = 'block';
             if (profileCreateLink) profileCreateLink.style.display = 'none';
-            if (adminDashboardLink) adminDashboardLink.style.display = 'none';
         }
     }
     

@@ -21,6 +21,9 @@ from django.utils import timezone
 try:
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     REPORTLAB_AVAILABLE = True
 except Exception:
     REPORTLAB_AVAILABLE = False
@@ -52,6 +55,74 @@ def _create_pdf_bytes(title, data_lines):
 
     c.showPage()
     c.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+
+def _create_custom_filtered_pdf(report):
+    """Create a PDF with a table for custom filtered reports."""
+    if not REPORTLAB_AVAILABLE:
+        return None
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=36, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title = report.title or "Filtered Report"
+    elements.append(Paragraph(f"<b>{title}</b>", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    # Add timestamp
+    if report.created_at:
+        timestamp = report.created_at.strftime("%B %d, %Y at %I:%M %p")
+        elements.append(Paragraph(f"<i>Generated: {timestamp}</i>", styles['Normal']))
+        elements.append(Spacer(1, 8))
+
+    # Add summary section
+    rows = (report.data or {}).get('rows') or []
+    summary_text = f"<b>Summary:</b> {len(rows)} alumni found"
+    elements.append(Paragraph(summary_text, styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    filters = (report.data or {}).get('filters') or {}
+    filter_lines = []
+    for key, value in filters.items():
+        if value not in [None, '', []]:
+            filter_lines.append(f"{key}: {value}")
+    if not filter_lines:
+        filter_lines.append("No filters applied")
+
+    elements.append(Paragraph("<b>Filters</b>", styles['Heading4']))
+    for line in filter_lines:
+        elements.append(Paragraph(line, styles['BodyText']))
+    elements.append(Spacer(1, 12))
+
+    table_data = [["Name", "Email", "Graduation Year", "Phone"]]
+    for row in rows:
+        name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+        table_data.append([
+            name or "-",
+            row.get('email') or "-",
+            row.get('graduation_year') or "-",
+            row.get('phone') or "-",
+        ])
+
+    table = Table(table_data, colWidths=[160, 200, 90, 90])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0056b3')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
     pdf = buffer.getvalue()
     buffer.close()
     return pdf
@@ -99,6 +170,44 @@ def _report_lines(report):
         lines.append("Top partners:")
         for p in (data.get('top_partners') or []):
             lines.append(f"- {p.get('name')}: {p.get('count')}")
+        return lines
+
+    if report.report_type == 'custom_filtered':
+        scope = data.get('scope') or 'alumni'
+        filters = data.get('filters') or {}
+        lines = [
+            f"Scope: {scope}",
+            "",
+            "Filters:",
+        ]
+        if filters:
+            for key, value in filters.items():
+                if value not in [None, '', []]:
+                    lines.append(f"- {key}: {value}")
+        else:
+            lines.append("- None")
+
+        lines.append("")
+        if scope == 'partners':
+            lines.append(f"Total partners: {data.get('total_partners', 0)}")
+            lines.append("By type:")
+            for t, cnt in (data.get('by_type') or {}).items():
+                lines.append(f"- {t}: {cnt}")
+            lines.append("By engagement level:")
+            for lvl, cnt in (data.get('by_engagement_level') or {}).items():
+                lines.append(f"- {lvl}: {cnt}")
+            return lines
+
+        lines.append(f"Total alumni: {data.get('total_alumni', 0)}")
+        lines.append("By status:")
+        for s, cnt in (data.get('by_status') or {}).items():
+            lines.append(f"- {s}: {cnt}")
+        lines.append("By degree:")
+        for deg, cnt in (data.get('by_degree') or {}).items():
+            lines.append(f"- {deg}: {cnt}")
+        lines.append("By graduation year:")
+        for yr, cnt in (data.get('by_graduation_year') or {}).items():
+            lines.append(f"- {yr}: {cnt}")
         return lines
 
     # Fallback
@@ -475,6 +584,110 @@ class ReportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(report)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['post'])
+    def generate_filtered_report(self, request):
+        """Generate a filtered report for alumni or partners"""
+        scope = request.data.get('scope', 'alumni')
+        filters = request.data.get('filters', {}) or {}
+
+        if scope not in ['alumni', 'partners']:
+            return Response({'error': 'Invalid scope'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if scope == 'partners':
+            queryset = Partner.objects.all()
+            partner_type = filters.get('partner_type')
+            engagement_level = filters.get('engagement_level')
+            industry = filters.get('industry')
+
+            if partner_type:
+                queryset = queryset.filter(partner_type=partner_type)
+            if engagement_level:
+                queryset = queryset.filter(engagement_level=engagement_level)
+            if industry:
+                queryset = queryset.filter(industry__icontains=industry)
+
+            data = {
+                'scope': 'partners',
+                'filters': {
+                    'partner_type': partner_type,
+                    'engagement_level': engagement_level,
+                    'industry': industry,
+                },
+                'total_partners': queryset.count(),
+                'by_type': dict(queryset.values_list('partner_type').annotate(count=Count('id'))),
+                'by_engagement_level': dict(queryset.values_list('engagement_level').annotate(count=Count('id'))),
+            }
+
+            report = Report.objects.create(
+                title='Filtered Partner Report',
+                report_type='custom_filtered',
+                data=data,
+                generated_by=request.user
+            )
+            serializer = self.get_serializer(report)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        queryset = Alumni.objects.all()
+        degree = filters.get('degree')
+        field_of_study = filters.get('field_of_study')
+        status_value = filters.get('status')
+        graduation_year = filters.get('graduation_year')
+        current_company = filters.get('current_company')
+        job_title = filters.get('job_title')
+        industry = filters.get('industry')
+
+        if degree:
+            queryset = queryset.filter(degree=degree)
+        if field_of_study:
+            queryset = queryset.filter(field_of_study__icontains=field_of_study)
+        if status_value:
+            queryset = queryset.filter(status=status_value)
+        if graduation_year:
+            queryset = queryset.filter(graduation_year=graduation_year)
+        if current_company:
+            queryset = queryset.filter(current_company__icontains=current_company)
+        if job_title:
+            queryset = queryset.filter(job_title__icontains=job_title)
+        if industry:
+            queryset = queryset.filter(industry__icontains=industry)
+
+        rows = list(
+            queryset.values(
+                'first_name',
+                'last_name',
+                'email',
+                'graduation_year',
+                'phone'
+            ).order_by('last_name', 'first_name')[:500]
+        )
+
+        data = {
+            'scope': 'alumni',
+            'filters': {
+                'degree': degree,
+                'field_of_study': field_of_study,
+                'status': status_value,
+                'graduation_year': graduation_year,
+                'current_company': current_company,
+                'job_title': job_title,
+                'industry': industry,
+            },
+            'total_alumni': queryset.count(),
+            'by_status': dict(queryset.values_list('status').annotate(count=Count('id'))),
+            'by_degree': dict(queryset.values_list('degree').annotate(count=Count('id'))),
+            'by_graduation_year': dict(queryset.values_list('graduation_year').annotate(count=Count('id'))),
+            'rows': rows,
+        }
+
+        report = Report.objects.create(
+            title='Filtered Alumni Report',
+            report_type='custom_filtered',
+            data=data,
+            generated_by=request.user
+        )
+        serializer = self.get_serializer(report)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['get'])
     def preview(self, request, pk=None):
         """Render a simple HTML preview for a report"""
@@ -493,8 +706,13 @@ class ReportViewSet(viewsets.ModelViewSet):
         if not REPORTLAB_AVAILABLE:
             return Response({'error': 'reportlab not installed on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        lines = _report_lines(report)
-        pdf = _create_pdf_bytes(report.title, lines)
+        # Use table-based PDF for custom filtered reports
+        if report.report_type == 'custom_filtered':
+            pdf = _create_custom_filtered_pdf(report)
+        else:
+            lines = _report_lines(report)
+            pdf = _create_pdf_bytes(report.title, lines)
+        
         if pdf is None:
             return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -825,6 +1043,8 @@ def admin_users_list(request):
     """List all users for admin management"""
     users = User.objects.all().order_by('-date_joined')
     data = [{
+        'alumni_status': user.alumni_profile.status if hasattr(user, 'alumni_profile') and user.alumni_profile else None,
+        'alumni_status_display': user.alumni_profile.get_status_display() if hasattr(user, 'alumni_profile') and user.alumni_profile else None,
         'id': user.id,
         'username': user.username,
         'email': user.email,
@@ -904,6 +1124,32 @@ def admin_alumni_bulk_action(request):
     )
     
     return Response({'success': True, 'updated': updated})
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_update_alumni_status(request, alumni_id):
+    """Update a single alumni status"""
+    status_value = request.data.get('status')
+    if status_value not in ['active', 'inactive', 'lost_contact']:
+        return Response({'error': 'Invalid status'}, status=400)
+
+    try:
+        alumni = Alumni.objects.get(id=alumni_id)
+    except Alumni.DoesNotExist:
+        return Response({'error': 'Alumni not found'}, status=404)
+
+    alumni.status = status_value
+    alumni.save(update_fields=['status', 'updated_at'])
+
+    Report.objects.create(
+        title=f"Alumni Status Updated: {alumni.first_name} {alumni.last_name}",
+        report_type='audit',
+        description=f"Status set to {status_value} by {request.user.username}",
+        generated_by=request.user
+    )
+
+    return Response({'success': True, 'status': alumni.status})
 
 
 @api_view(['POST'])

@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Settings - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<section class="hero" style="padding: 40px 0;">
+    <div class="container">
+        <h1>Profile Settings</h1>
+        <p class="lead">Manage your account information and password</p>
+    </div>
+</section>
+
+<section class="api-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3"><i class="fas fa-user"></i> Account Info</h5>
+                        <form id="userProfileForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label" for="username">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="firstName">First Name</label>
+                                    <input type="text" class="form-control" id="firstName" name="first_name">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="lastName">Last Name</label>
+                                    <input type="text" class="form-control" id="lastName" name="last_name">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="email">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                            <div id="userProfileMsg" class="alert d-none" role="alert"></div>
+                            <button type="submit" class="btn btn-primary w-100">Save Account Info</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3"><i class="fas fa-key"></i> Change Password</h5>
+                        <form id="passwordForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label" for="currentPassword">Current Password</label>
+                                <input type="password" class="form-control" id="currentPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="newPassword">New Password</label>
+                                <input type="password" class="form-control" id="newPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" required>
+                            </div>
+                            <div id="passwordMsg" class="alert d-none" role="alert"></div>
+                            <button type="submit" class="btn btn-outline-primary w-100">Update Password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-3"><i class="fas fa-graduation-cap"></i> Alumni Profile</h5>
+                        <div id="alumniProfileNotice" class="alert alert-info d-none"></div>
+                        <form id="alumniProfileForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="alumniFirstName">First Name</label>
+                                    <input type="text" class="form-control" id="alumniFirstName" name="first_name">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="alumniLastName">Last Name</label>
+                                    <input type="text" class="form-control" id="alumniLastName" name="last_name">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="alumniEmail">Email</label>
+                                <input type="email" class="form-control" id="alumniEmail" name="email">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="phone">Phone</label>
+                                    <input type="text" class="form-control" id="phone" name="phone">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="status">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="lost_contact">Lost Contact</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="degree">Degree</label>
+                                    <input type="text" class="form-control" id="degree" name="degree">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="fieldOfStudy">Field of Study</label>
+                                    <input type="text" class="form-control" id="fieldOfStudy" name="field_of_study">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label" for="graduationYear">Graduation Year</label>
+                                    <input type="number" class="form-control" id="graduationYear" name="graduation_year">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label" for="industry">Industry</label>
+                                    <input type="text" class="form-control" id="industry" name="industry">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label" for="jobTitle">Job Title</label>
+                                    <input type="text" class="form-control" id="jobTitle" name="job_title">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="currentCompany">Current Company</label>
+                                    <input type="text" class="form-control" id="currentCompany" name="current_company">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label" for="linkedinUrl">LinkedIn URL</label>
+                                    <input type="url" class="form-control" id="linkedinUrl" name="linkedin_url">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="bio">Bio</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3"></textarea>
+                            </div>
+                            <div id="alumniProfileMsg" class="alert d-none" role="alert"></div>
+                            <button type="submit" class="btn btn-success w-100">Save Alumni Profile</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function setMessage(el, type, msg) {
+    if (!el) return;
+    el.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-info');
+    el.classList.add(type);
+    el.textContent = msg;
+}
+
+async function loadProfileSettings() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        window.location.href = '/login/';
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/user/', {
+            headers: { 'Authorization': 'Token ' + token }
+        });
+        if (!response.ok) {
+            window.location.href = '/login/';
+            return;
+        }
+        const data = await response.json();
+        const user = data.user || data;
+
+        document.getElementById('username').value = user.username || '';
+        document.getElementById('firstName').value = user.first_name || '';
+        document.getElementById('lastName').value = user.last_name || '';
+        document.getElementById('email').value = user.email || '';
+
+        const alumniResponse = await fetch('/api/my-profile/', {
+            headers: { 'Authorization': 'Token ' + token }
+        });
+
+        if (alumniResponse.ok) {
+            const alumni = await alumniResponse.json();
+            document.getElementById('alumniFirstName').value = alumni.first_name || '';
+            document.getElementById('alumniLastName').value = alumni.last_name || '';
+            document.getElementById('alumniEmail').value = alumni.email || '';
+            document.getElementById('phone').value = alumni.phone || '';
+            document.getElementById('status').value = alumni.status || 'active';
+            document.getElementById('degree').value = alumni.degree || '';
+            document.getElementById('fieldOfStudy').value = alumni.field_of_study || '';
+            document.getElementById('graduationYear').value = alumni.graduation_year || '';
+            document.getElementById('industry').value = alumni.industry || '';
+            document.getElementById('jobTitle').value = alumni.job_title || '';
+            document.getElementById('currentCompany').value = alumni.current_company || '';
+            document.getElementById('linkedinUrl').value = alumni.linkedin_url || '';
+            document.getElementById('bio').value = alumni.bio || '';
+        } else {
+            const notice = document.getElementById('alumniProfileNotice');
+            setMessage(notice, 'alert-info', 'No alumni profile found. You can create one from the Create Profile page.');
+        }
+    } catch (error) {
+        console.error('Profile settings error:', error);
+    }
+}
+
+async function handleUserProfileSubmit(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('authToken');
+    const payload = {
+        username: document.getElementById('username').value,
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        email: document.getElementById('email').value
+    };
+
+    const msg = document.getElementById('userProfileMsg');
+    try {
+        const response = await fetch('/auth/update-profile/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok) {
+            setMessage(msg, 'alert-success', 'Account info updated successfully.');
+        } else {
+            const errorMsg = result.username || result.email || result.error || 'Unable to update account info.';
+            setMessage(msg, 'alert-danger', errorMsg);
+        }
+    } catch (error) {
+        setMessage(msg, 'alert-danger', 'Error updating account info.');
+    }
+}
+
+async function handleAlumniProfileSubmit(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('authToken');
+    const rawPayload = {
+        first_name: document.getElementById('alumniFirstName').value,
+        last_name: document.getElementById('alumniLastName').value,
+        email: document.getElementById('alumniEmail').value,
+        phone: document.getElementById('phone').value,
+        status: document.getElementById('status').value,
+        degree: document.getElementById('degree').value,
+        field_of_study: document.getElementById('fieldOfStudy').value,
+        graduation_year: document.getElementById('graduationYear').value,
+        industry: document.getElementById('industry').value,
+        job_title: document.getElementById('jobTitle').value,
+        current_company: document.getElementById('currentCompany').value,
+        linkedin_url: document.getElementById('linkedinUrl').value,
+        bio: document.getElementById('bio').value
+    };
+    const payload = Object.fromEntries(
+        Object.entries(rawPayload).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+    );
+
+    const msg = document.getElementById('alumniProfileMsg');
+    try {
+        const response = await fetch('/auth/update-alumni-profile/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok) {
+            setMessage(msg, 'alert-success', 'Alumni profile updated successfully.');
+        } else {
+            const errorMsg = result.error || 'Unable to update alumni profile.';
+            setMessage(msg, 'alert-danger', errorMsg);
+        }
+    } catch (error) {
+        setMessage(msg, 'alert-danger', 'Error updating alumni profile.');
+    }
+}
+
+async function handlePasswordSubmit(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('authToken');
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const msg = document.getElementById('passwordMsg');
+
+    if (newPassword !== confirmPassword) {
+        setMessage(msg, 'alert-danger', 'New passwords do not match.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/change-password/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                old_password: currentPassword,
+                new_password: newPassword,
+                new_password2: confirmPassword
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok) {
+            setMessage(msg, 'alert-success', 'Password updated successfully.');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        } else {
+            const errorMsg = result.old_password || result.new_password || result.error || 'Unable to update password.';
+            setMessage(msg, 'alert-danger', errorMsg);
+        }
+    } catch (error) {
+        setMessage(msg, 'alert-danger', 'Error updating password.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadProfileSettings();
+    document.getElementById('userProfileForm').addEventListener('submit', handleUserProfileSubmit);
+    document.getElementById('alumniProfileForm').addEventListener('submit', handleAlumniProfileSubmit);
+    document.getElementById('passwordForm').addEventListener('submit', handlePasswordSubmit);
+});
+</script>
+{% endblock %}

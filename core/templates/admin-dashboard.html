@@ -110,6 +110,11 @@
                 <i class="fas fa-file-export"></i> Data Exports
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="partners-tab" data-bs-toggle="tab" data-bs-target="#partners" type="button" role="tab">
+                <i class="fas fa-handshake"></i> Partners
+            </button>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -303,6 +308,86 @@
                     </div>
                 </div>
             </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-file-pdf"></i> Generate Report</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <button class="btn btn-outline-primary w-100" onclick="generateReport('alumni')">
+                                        <i class="fas fa-file-pdf"></i> Alumni Summary
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button class="btn btn-outline-primary w-100" onclick="generateReport('partner')">
+                                        <i class="fas fa-file-pdf"></i> Partner Summary
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button class="btn btn-outline-primary w-100" onclick="generateReport('engagement')">
+                                        <i class="fas fa-file-pdf"></i> Engagement Report
+                                    </button>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="fw-semibold">Custom Filtered Alumni Report</h6>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small">Degree</label>
+                                    <select class="form-select form-select-sm" id="filteredReportDegree">
+                                        <option value="">Any</option>
+                                        <option value="BS">BS</option>
+                                        <option value="BA">BA</option>
+                                        <option value="MS">MS</option>
+                                        <option value="MA">MA</option>
+                                        <option value="PhD">PhD</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Field of Study</label>
+                                    <input type="text" class="form-control form-control-sm" id="filteredReportFieldOfStudy" placeholder="Any">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Graduation Year</label>
+                                    <input type="number" class="form-control form-control-sm" id="filteredReportYear" placeholder="Any">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Current Company</label>
+                                    <input type="text" class="form-control form-control-sm" id="filteredReportCompany" placeholder="Any">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Job Title</label>
+                                    <input type="text" class="form-control form-control-sm" id="filteredReportJobTitle" placeholder="Any">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Industry</label>
+                                    <input type="text" class="form-control form-control-sm" id="filteredReportIndustry" placeholder="Any">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Status</label>
+                                    <select class="form-select form-select-sm" id="filteredReportStatus">
+                                        <option value="">Any</option>
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="lost_contact">Lost Contact</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button class="btn btn-primary btn-sm w-100" onclick="generateFilteredReport()">
+                                        <i class="fas fa-filter"></i> Generate Filtered Report
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="adminReportResult" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Bulk Operations Tab -->
@@ -427,6 +512,7 @@
                                     <th>Username</th>
                                     <th>Email</th>
                                     <th>Staff</th>
+                                    <th>Alumni Status</th>
                                     <th>Active</th>
                                     <th>Last Login</th>
                                     <th>Actions</th>
@@ -434,7 +520,7 @@
                             </thead>
                             <tbody id="usersTableBody">
                                 <tr>
-                                    <td colspan="6" class="text-center">Loading users...</td>
+                                    <td colspan="7" class="text-center">Loading users...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -481,9 +567,182 @@
                 </div>
             </div>
         </div>
+
+        <!-- Partners Tab -->
+        <div class="tab-pane fade" id="partners" role="tabpanel">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Create New Partner</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="createPartnerForm">
+                                <div class="mb-3">
+                                    <label for="partnerName" class="form-label">Organization Name *</label>
+                                    <input type="text" class="form-control" id="partnerName" placeholder="Partner organization name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerType" class="form-label">Partner Type *</label>
+                                    <select class="form-select" id="partnerType" required>
+                                        <option value="">-- Select Type --</option>
+                                        <option value="corporate">Corporate</option>
+                                        <option value="nonprofit">Non-profit</option>
+                                        <option value="government">Government</option>
+                                        <option value="educational">Educational Institution</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerEmail" class="form-label">Email *</label>
+                                    <input type="email" class="form-control" id="partnerEmail" placeholder="Contact email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerWebsite" class="form-label">Website</label>
+                                    <input type="url" class="form-control" id="partnerWebsite" placeholder="https://example.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerPhone" class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="partnerPhone" placeholder="Phone number">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerIndustry" class="form-label">Industry</label>
+                                    <input type="text" class="form-control" id="partnerIndustry" placeholder="Industry or sector">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerDescription" class="form-label">Description</label>
+                                    <textarea class="form-control" id="partnerDescription" rows="3" placeholder="Partner description and details"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerEngagementLevel" class="form-label">Engagement Level</label>
+                                    <select class="form-select" id="partnerEngagementLevel">
+                                        <option value="prospective">Prospective</option>
+                                        <option value="bronze">Bronze</option>
+                                        <option value="silver">Silver</option>
+                                        <option value="gold">Gold</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerContactName" class="form-label">Primary Contact Name</label>
+                                    <input type="text" class="form-control" id="partnerContactName" placeholder="Contact person name">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerContactEmail" class="form-label">Primary Contact Email</label>
+                                    <input type="email" class="form-control" id="partnerContactEmail" placeholder="Contact person email">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="partnerContactPhone" class="form-label">Primary Contact Phone</label>
+                                    <input type="tel" class="form-control" id="partnerContactPhone" placeholder="Contact person phone">
+                                </div>
+                                <div id="partnerFormMessage"></div>
+                                <button type="submit" class="btn btn-success w-100" id="submitPartnerBtn">
+                                    <i class="fas fa-save"></i> Create Partner
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-list"></i> Recent Partners</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                            <div id="recentPartnersList">
+                                <div class="text-center text-muted">
+                                    <p>Loading partners...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </div><!-- Close adminDashboardContent -->
+
+<!-- Edit Partner Modal -->
+<div class="modal fade" id="editPartnerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Partner</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPartnerForm">
+                    <input type="hidden" id="editPartnerId">
+                    <div class="mb-3">
+                        <label for="editPartnerName" class="form-label">Organization Name</label>
+                        <input type="text" class="form-control" id="editPartnerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerType" class="form-label">Partner Type</label>
+                        <select class="form-select" id="editPartnerType" required>
+                            <option value="corporate">Corporate</option>
+                            <option value="nonprofit">Non-profit</option>
+                            <option value="government">Government</option>
+                            <option value="educational">Educational Institution</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editPartnerEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerWebsite" class="form-label">Website</label>
+                        <input type="url" class="form-control" id="editPartnerWebsite">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerPhone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="editPartnerPhone">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerIndustry" class="form-label">Industry</label>
+                        <input type="text" class="form-control" id="editPartnerIndustry">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editPartnerDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerEngagementLevel" class="form-label">Engagement Level</label>
+                        <select class="form-select" id="editPartnerEngagementLevel">
+                            <option value="prospective">Prospective</option>
+                            <option value="bronze">Bronze</option>
+                            <option value="silver">Silver</option>
+                            <option value="gold">Gold</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerContactName" class="form-label">Primary Contact Name</label>
+                        <input type="text" class="form-control" id="editPartnerContactName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerContactEmail" class="form-label">Primary Contact Email</label>
+                        <input type="email" class="form-control" id="editPartnerContactEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPartnerContactPhone" class="form-label">Primary Contact Phone</label>
+                        <input type="tel" class="form-control" id="editPartnerContactPhone">
+                    </div>
+                    <div id="editPartnerFormMessage"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deletePartnerBtn">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <button type="button" class="btn btn-primary" id="updatePartnerBtn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
@@ -656,7 +915,7 @@ function setDashboardLoadingState() {
 
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
-        usersBody.innerHTML = '<tr><td colspan="6" class="text-center">Loading users...</td></tr>';
+        usersBody.innerHTML = '<tr><td colspan="7" class="text-center">Loading users...</td></tr>';
     }
 
     const engagementList = document.getElementById('adminEngagementTypeList');
@@ -711,23 +970,23 @@ async function loadDashboardData() {
             fetch('/api/admin/users/', { headers: { 'Authorization': `Token ${token}` }, credentials: 'omit' })
         ]);
 
-        const alumni = await alumniRes.json();
-        const partners = await partnerRes.json();
-        const engagements = await engagementRes.json();
-        const users = await userRes.json();
+        const alumni = normalizeListResponse(await alumniRes.json());
+        const partners = normalizeListResponse(await partnerRes.json());
+        const engagements = normalizeListResponse(await engagementRes.json());
+        const users = normalizeListResponse(await userRes.json());
 
-        document.getElementById('totalAlumni').textContent = alumni.length || 0;
-        document.getElementById('totalPartners').textContent = partners.length || 0;
-        document.getElementById('totalEngagements').textContent = engagements.length || 0;
-        document.getElementById('totalUsers').textContent = users.length || 0;
+        document.getElementById('totalAlumni').textContent = alumni.count || 0;
+        document.getElementById('totalPartners').textContent = partners.count || 0;
+        document.getElementById('totalEngagements').textContent = engagements.count || 0;
+        document.getElementById('totalUsers').textContent = users.count || 0;
 
         // Analyze data for charts
-        analyzeAlumniData(alumni);
-        analyzePartnerData(partners);
-        analyzeDegreeData(alumni);
-        updateSystemStatus(alumni, partners, users);
-        updateBulkOperationCounts(alumni, partners);
-        document.getElementById('activeUserCount').textContent = users.filter(u => u.is_active).length;
+        analyzeAlumniData(alumni.results);
+        analyzePartnerData(partners.results);
+        analyzeDegreeData(alumni.results);
+        updateSystemStatus(alumni.results, partners.results, users.results);
+        updateBulkOperationCounts(alumni.results, partners.results);
+        document.getElementById('activeUserCount').textContent = users.results.filter(u => u.is_active).length;
         await Promise.all([
             loadAuditLogs(),
             loadUsers(),
@@ -998,6 +1257,150 @@ function renderRecentReports(reports) {
     });
     html += '</ul>';
     container.innerHTML = html;
+}
+
+async function generateReport(type) {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+
+    const endpointMap = {
+        'alumni': '/api/reports/generate_alumni_summary/',
+        'partner': '/api/reports/generate_partner_summary/',
+        'engagement': '/api/reports/generate_engagement_analytics/'
+    };
+
+    const url = endpointMap[type];
+    if (!url) {
+        alert('Unknown report type');
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ generated_at: new Date().toISOString() })
+        });
+
+        if (response.ok) {
+            const report = await response.json();
+            const previewUrl = `/api/reports/${report.id}/preview/`;
+            const downloadUrl = `/api/reports/${report.id}/download_pdf/`;
+
+            window.open(previewUrl, '_blank', 'noopener');
+
+            const result = document.getElementById('adminReportResult');
+            if (result) {
+                result.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Report generated. Preview opened in a new tab.<br>
+                        <small>
+                            <a href="${previewUrl}" target="_blank">Open Preview</a> ·
+                            <a href="${downloadUrl}" target="_blank">Download PDF</a>
+                        </small>
+                    </div>
+                `;
+            }
+            loadRecentReports();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            const result = document.getElementById('adminReportResult');
+            if (result) {
+                result.innerHTML = `
+                    <div class="alert alert-danger">Error generating report: ${err.error || response.statusText}</div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report');
+    }
+}
+
+async function generateFilteredReport() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+
+    const scope = 'alumni';
+    const filters = {
+        degree: document.getElementById('filteredReportDegree')?.value || '',
+        field_of_study: document.getElementById('filteredReportFieldOfStudy')?.value || '',
+        graduation_year: document.getElementById('filteredReportYear')?.value || '',
+        current_company: document.getElementById('filteredReportCompany')?.value || '',
+        job_title: document.getElementById('filteredReportJobTitle')?.value || '',
+        industry: document.getElementById('filteredReportIndustry')?.value || '',
+        status: document.getElementById('filteredReportStatus')?.value || ''
+    };
+
+    try {
+        const response = await fetch('/api/reports/generate_filtered_report/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ scope, filters })
+        });
+
+        const result = document.getElementById('adminReportResult');
+        if (response.ok) {
+            const report = await response.json();
+            const previewUrl = `/api/reports/${report.id}/preview/`;
+            const downloadUrl = `/api/reports/${report.id}/download_pdf/`;
+
+            window.open(previewUrl, '_blank', 'noopener');
+
+            if (result) {
+                result.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Filtered report generated. Preview opened in a new tab.<br>
+                        <small>
+                            <a href="${previewUrl}" target="_blank">Open Preview</a> ·
+                            <a href="${downloadUrl}" target="_blank">Download PDF</a>
+                        </small>
+                    </div>
+                `;
+            }
+            loadRecentReports();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            if (result) {
+                result.innerHTML = `
+                    <div class="alert alert-danger">Error generating filtered report: ${err.error || response.statusText}</div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error generating filtered report:', error);
+        alert('Error generating filtered report');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Analyze alumni status distribution
@@ -1325,7 +1728,7 @@ async function loadUsers() {
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading users</td></tr>';
+        document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading users</td></tr>';
     }
 }
 
@@ -1333,7 +1736,7 @@ async function loadUsers() {
 function displayUsers(users) {
     const tbody = document.getElementById('usersTableBody');
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No users found</td></tr>';
         return;
     }
 
@@ -1342,6 +1745,7 @@ function displayUsers(users) {
             <td>${user.username}</td>
             <td>${user.email || '-'}</td>
             <td>${user.is_staff ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+            <td>${formatAlumniStatus(user)}</td>
             <td>${user.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>'}</td>
             <td>${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
             <td>
@@ -1351,6 +1755,22 @@ function displayUsers(users) {
             </td>
         </tr>
     `).join('');
+}
+
+function formatAlumniStatus(user) {
+    if (!user.alumni_status) {
+        return '<span class="text-muted">No profile</span>';
+    }
+
+    const status = user.alumni_status;
+    const label = user.alumni_status_display || status;
+    const badgeClass = status === 'active'
+        ? 'bg-success'
+        : status === 'inactive'
+            ? 'bg-secondary'
+            : 'bg-warning text-dark';
+
+    return `<span class="badge ${badgeClass}">${label}</span>`;
 }
 
 // Search users
@@ -1423,8 +1843,267 @@ async function exportData(type) {
     }
 }
 
+// Partner Management Functions
+async function createPartner(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('authToken');
+    const messageDiv = document.getElementById('partnerFormMessage');
+    
+    const partnerData = {
+        name: document.getElementById('partnerName').value,
+        partner_type: document.getElementById('partnerType').value,
+        email: document.getElementById('partnerEmail').value,
+        website: document.getElementById('partnerWebsite').value || null,
+        phone: document.getElementById('partnerPhone').value || '',
+        industry: document.getElementById('partnerIndustry').value || '',
+        description: document.getElementById('partnerDescription').value || '',
+        engagement_level: document.getElementById('partnerEngagementLevel').value || 'prospective',
+        primary_contact_name: document.getElementById('partnerContactName').value || '',
+        primary_contact_email: document.getElementById('partnerContactEmail').value || '',
+        primary_contact_phone: document.getElementById('partnerContactPhone').value || '',
+    };
+
+    try {
+        const response = await fetch('/api/partners/', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(partnerData)
+        });
+
+        if (response.ok) {
+            messageDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Partner created successfully!</div>';
+            document.getElementById('createPartnerForm').reset();
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+                loadRecentPartners();
+            }, 2000);
+        } else {
+            const error = await response.json();
+            const errorMsg = error.name ? error.name[0] : 'Error creating partner';
+            messageDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${errorMsg}</div>`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        messageDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error creating partner</div>';
+    }
+}
+
+async function loadRecentPartners() {
+    const token = localStorage.getItem('authToken');
+    try {
+        const response = await fetch('/api/partners/?limit=10&ordering=-id', {
+            headers: {
+                'Authorization': `Token ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const partners = data.results || [];
+            const partnersList = document.getElementById('recentPartnersList');
+            
+            if (partners.length === 0) {
+                partnersList.innerHTML = '<div class="text-center text-muted"><p>No partners yet</p></div>';
+            } else {
+                let html = '';
+                partners.forEach(partner => {
+                    const engagementBadgeColor = {
+                        'gold': 'warning',
+                        'silver': 'secondary',
+                        'bronze': 'info',
+                        'prospective': 'light'
+                    }[partner.engagement_level] || 'light';
+                    
+                    const partnerTypeLabel = {
+                        'corporate': 'Corporate',
+                        'nonprofit': 'Non-profit',
+                        'government': 'Government',
+                        'educational': 'Educational',
+                        'other': 'Other'
+                    }[partner.partner_type] || partner.partner_type;
+
+                    html += `
+                        <div class="mb-3 p-2 border rounded">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div style="flex: 1;">
+                                    <h6 class="mb-1">${partner.name}</h6>
+                                    <small class="text-muted">
+                                        <span class="badge bg-secondary">${partnerTypeLabel}</span>
+                                        <span class="badge bg-${engagementBadgeColor}">${partner.engagement_level}</span>
+                                    </small>
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="openEditPartner(${partner.id})" title="Edit partner">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2 small">
+                                <div><strong>Email:</strong> ${partner.email}</div>
+                                ${partner.industry ? `<div><strong>Industry:</strong> ${partner.industry}</div>` : ''}
+                                ${partner.phone ? `<div><strong>Phone:</strong> ${partner.phone}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                partnersList.innerHTML = html;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading partners:', error);
+        document.getElementById('recentPartnersList').innerHTML = '<div class="alert alert-danger">Error loading partners</div>';
+    }
+}
+
+async function openEditPartner(partnerId) {
+    const token = localStorage.getItem('authToken');
+    try {
+        const response = await fetch(`/api/partners/${partnerId}/`, {
+            headers: {
+                'Authorization': `Token ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const partner = await response.json();
+            
+            // Populate form fields
+            document.getElementById('editPartnerId').value = partner.id;
+            document.getElementById('editPartnerName').value = partner.name || '';
+            document.getElementById('editPartnerType').value = partner.partner_type || '';
+            document.getElementById('editPartnerEmail').value = partner.email || '';
+            document.getElementById('editPartnerWebsite').value = partner.website || '';
+            document.getElementById('editPartnerPhone').value = partner.phone || '';
+            document.getElementById('editPartnerIndustry').value = partner.industry || '';
+            document.getElementById('editPartnerDescription').value = partner.description || '';
+            document.getElementById('editPartnerEngagementLevel').value = partner.engagement_level || 'prospective';
+            document.getElementById('editPartnerContactName').value = partner.primary_contact_name || '';
+            document.getElementById('editPartnerContactEmail').value = partner.primary_contact_email || '';
+            document.getElementById('editPartnerContactPhone').value = partner.primary_contact_phone || '';
+            document.getElementById('editPartnerFormMessage').innerHTML = '';
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('editPartnerModal')).show();
+        } else {
+            alert('Error loading partner details');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading partner details');
+    }
+}
+
+async function updatePartner() {
+    const token = localStorage.getItem('authToken');
+    const partnerId = document.getElementById('editPartnerId').value;
+    const messageDiv = document.getElementById('editPartnerFormMessage');
+    
+    const partnerData = {
+        name: document.getElementById('editPartnerName').value,
+        partner_type: document.getElementById('editPartnerType').value,
+        email: document.getElementById('editPartnerEmail').value,
+        website: document.getElementById('editPartnerWebsite').value || null,
+        phone: document.getElementById('editPartnerPhone').value || '',
+        industry: document.getElementById('editPartnerIndustry').value || '',
+        description: document.getElementById('editPartnerDescription').value || '',
+        engagement_level: document.getElementById('editPartnerEngagementLevel').value || 'prospective',
+        primary_contact_name: document.getElementById('editPartnerContactName').value || '',
+        primary_contact_email: document.getElementById('editPartnerContactEmail').value || '',
+        primary_contact_phone: document.getElementById('editPartnerContactPhone').value || '',
+    };
+
+    try {
+        const response = await fetch(`/api/partners/${partnerId}/`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(partnerData)
+        });
+
+        if (response.ok) {
+            messageDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Partner updated successfully!</div>';
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('editPartnerModal')).hide();
+                loadRecentPartners();
+            }, 1500);
+        } else {
+            const errorData = await response.json();
+            let errorMsg = 'Error updating partner';
+            
+            // Extract error message from various error response formats
+            if (errorData.name && Array.isArray(errorData.name)) {
+                errorMsg = errorData.name[0];
+            } else if (errorData.detail) {
+                errorMsg = errorData.detail;
+            } else if (typeof errorData === 'object') {
+                // Get first error message from any field
+                for (const [key, value] of Object.entries(errorData)) {
+                    if (Array.isArray(value)) {
+                        errorMsg = `${key}: ${value[0]}`;
+                    } else {
+                        errorMsg = `${key}: ${value}`;
+                    }
+                    break;
+                }
+            }
+            
+            messageDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${errorMsg}</div>`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        messageDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error updating partner</div>';
+    }
+}
+
+async function deletePartner() {
+    const token = localStorage.getItem('authToken');
+    const partnerId = document.getElementById('editPartnerId').value;
+    
+    if (!confirm('Are you sure you want to delete this partner?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/partners/${partnerId}/`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Token ${token}`
+            }
+        });
+
+        if (response.ok || response.status === 204) {
+            alert('Partner deleted successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('editPartnerModal')).hide();
+            loadRecentPartners();
+        } else {
+            alert('Error deleting partner');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error deleting partner');
+    }
+}
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', checkAdminAccess);
+document.addEventListener('DOMContentLoaded', function() {
+    checkAdminAccess();
+    
+    // Setup partner form
+    const partnerForm = document.getElementById('createPartnerForm');
+    if (partnerForm) {
+        partnerForm.addEventListener('submit', createPartner);
+    }
+    
+    // Setup edit partner buttons
+    document.getElementById('updatePartnerBtn')?.addEventListener('click', updatePartner);
+    document.getElementById('deletePartnerBtn')?.addEventListener('click', deletePartner);
+    
+    // Load recent partners when partners tab is clicked
+    document.getElementById('partners-tab')?.addEventListener('click', loadRecentPartners);
+});
 </script>
 
 <style>

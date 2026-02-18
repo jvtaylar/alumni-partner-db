@@ -101,6 +101,7 @@ if (!localStorage.getItem('authToken')) window.location.href = '/login/';
                         <option value="">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
+                        <option value="lost_contact">Lost Contact</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -149,11 +150,38 @@ if (!localStorage.getItem('authToken')) window.location.href = '/login/';
 let searchTimeout;
 let currentPage = 1;
 let currentQuery = '';
+let isAdminUser = false;
 
 // Load alumni on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadAlumni();
+    initPage();
 });
+
+async function initPage() {
+    await resolveCurrentUser();
+    await loadAlumni();
+}
+
+async function resolveCurrentUser() {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        isAdminUser = false;
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/user/', {
+            headers: { 'Authorization': 'Token ' + token }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            const user = data.user || data;
+            isAdminUser = !!(user.is_staff || user.is_superuser);
+        }
+    } catch (error) {
+        isAdminUser = false;
+    }
+}
 
 function toggleAdvancedFilters() {
     const filters = document.getElementById('advancedFilters');
@@ -256,10 +284,11 @@ function displayAlumni(alumni) {
                     </div>
                     
                     <div class="mb-3">
-                        <span class="badge ${a.status === 'active' ? 'bg-success' : 'bg-secondary'}">
+                        <span class="badge ${statusBadgeClass(a.status)}">
                             ${(a.status || 'inactive').toUpperCase()}
                         </span>
                     </div>
+                    ${isAdminUser ? renderAdminStatusControls(a) : ''}
                     
                     <div class="d-grid gap-2">
                         ${a.email ? 
@@ -278,6 +307,57 @@ function displayAlumni(alumni) {
     `).join('');
     
     document.getElementById('alumniGrid').innerHTML = html;
+}
+
+function statusBadgeClass(status) {
+    if (status === 'active') return 'bg-success';
+    if (status === 'lost_contact') return 'bg-warning text-dark';
+    return 'bg-secondary';
+}
+
+function renderAdminStatusControls(alumni) {
+    return `
+        <div class="border-top pt-3 mt-3">
+            <label class="form-label small text-muted">Admin: Update Status</label>
+            <div class="input-group input-group-sm">
+                <select class="form-select" id="statusSelect-${alumni.id}">
+                    <option value="active" ${alumni.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="inactive" ${alumni.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                    <option value="lost_contact" ${alumni.status === 'lost_contact' ? 'selected' : ''}>Lost Contact</option>
+                </select>
+                <button class="btn btn-outline-primary" onclick="updateAlumniStatus(${alumni.id})">
+                    Update
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function updateAlumniStatus(alumniId) {
+    const token = localStorage.getItem('authToken');
+    const select = document.getElementById(`statusSelect-${alumniId}`);
+    if (!select) return;
+    const newStatus = select.value;
+
+    try {
+        const response = await fetch(`/api/admin/alumni/${alumniId}/status/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Token ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+            await loadAlumni();
+        } else {
+            alert('Error updating alumni status');
+        }
+    } catch (error) {
+        console.error('Error updating alumni status:', error);
+        alert('Error updating alumni status');
+    }
 }
 
 function displayPagination(data, baseUrl) {

@@ -66,6 +66,53 @@
                         <li>{{ p.name }}: {{ p.count }}</li>
                     {% endfor %}
                 </ul>
+            {% elif report.report_type == 'custom_filtered' %}
+                <div class="mb-3">
+                    <div class="text-muted">Scope: <strong>{{ report.data.scope }}</strong></div>
+                    <div class="mt-2">
+                        <strong>Filters:</strong>
+                        <ul class="list-unstyled mb-0">
+                            {% if report.data.filters %}
+                                {% for key, value in report.data.filters.items %}
+                                    {% if value %}
+                                        <li>{{ key|capfirst }}: {{ value }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <li>None</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-3"><strong>Total alumni:</strong> {{ report.data.total_alumni }}</div>
+                <h6>Filtered Alumni Results</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Graduation Year</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.data.rows %}
+                                <tr>
+                                    <td>{{ row.first_name }} {{ row.last_name }}</td>
+                                    <td>{{ row.email }}</td>
+                                    <td>{{ row.graduation_year }}</td>
+                                    <td>{{ row.phone|default:"-" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No results found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <pre class="mb-0">{{ report.data|safe }}</pre>
             {% endif %}

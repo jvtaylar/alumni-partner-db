@@ -58,6 +58,17 @@ class PartnerSerializer(serializers.ModelSerializer):
             'notes', 'created_at', 'updated_at', 'last_engagement'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def validate_name(self, value):
+        """Validate name uniqueness, allowing same name for same partner during update"""
+        if self.instance and self.instance.name == value:
+            # Allow same name if updating the same instance
+            return value
+        
+        # Check if name exists for a different partner
+        if Partner.objects.filter(name=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError("A partner with this name already exists.")
+        return value
 
 
 class PartnerDetailSerializer(PartnerSerializer):
