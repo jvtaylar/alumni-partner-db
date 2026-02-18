@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Alumni - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<script>
+if (!localStorage.getItem('authToken')) window.location.href = '/login/';
+</script>
+<style>
+    .search-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .alumni-card {
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .alumni-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .alumni-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+    
+    .filter-chip {
+        display: inline-block;
+        background: #f0f0f0;
+        padding: 5px 12px;
+        border-radius: 20px;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-chip:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .filter-chip.active {
+        background: #667eea;
+        color: white;
+    }
+</style>
+
+<!-- Search Section -->
+<section class="search-section">
+    <div class="container">
+        <h1 class="mb-4">Alumni Network</h1>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="input-group input-group-lg">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search by name, company, or industry..." onkeyup="debounceSearch()">
+                    <button class="btn btn-light" type="button" onclick="searchAlumni()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-light btn-lg" onclick="toggleAdvancedFilters()">
+                    <i class="fas fa-filter"></i> Filters
+                </button>
+            </div>
+        </div>
+        
+        <!-- Advanced Filters -->
+        <div id="advancedFilters" class="mt-4" style="display: none;">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label text-white">Degree</label>
+                    <select class="form-select" id="degreeFilter" onchange="applyFilters()">
+                        <option value="">All Degrees</option>
+                        <option value="BA">Bachelor of Arts</option>
+                        <option value="BS">Bachelor of Science</option>
+                        <option value="MA">Master of Arts</option>
+                        <option value="MS">Master of Science</option>
+                        <option value="MBA">MBA</option>
+                        <option value="PhD">PhD</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Status</label>
+                    <select class="form-select" id="statusFilter" onchange="applyFilters()">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Graduation Year</label>
+                    <input type="number" class="form-control" id="yearFilter" placeholder="e.g. 2020" onchange="applyFilters()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-white">Industry</label>
+                    <input type="text" class="form-control" id="industryFilter" placeholder="e.g. Technology" onchange="applyFilters()">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-outline-light" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Results Count -->
+    <div class="mb-4">
+        <p class="text-muted">
+            Showing <span id="resultCount">0</span> alumni
+            <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()" style="float: right;">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </p>
+    </div>
+    
+    <!-- Alumni Grid -->
+    <div class="row g-4" id="alumniGrid">
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <nav id="pagination" class="mt-5 mb-5"></nav>
+</div>
+
+<script>
+let searchTimeout;
+let currentPage = 1;
+let currentQuery = '';
+
+// Load alumni on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAlumni();
+});
+
+function toggleAdvancedFilters() {
+    const filters = document.getElementById('advancedFilters');
+    filters.style.display = filters.style.display === 'none' ? 'block' : 'none';
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(searchAlumni, 500);
+}
+
+async function searchAlumni() {
+    currentPage = 1;
+    await loadAlumni();
+}
+
+async function applyFilters() {
+    currentPage = 1;
+    await loadAlumni();
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('degreeFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('yearFilter').value = '';
+    document.getElementById('industryFilter').value = '';
+    currentPage = 1;
+    loadAlumni();
+}
+
+async function loadAlumni() {
+    const token = localStorage.getItem('authToken');
+    const search = document.getElementById('searchInput').value;
+    const degree = document.getElementById('degreeFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const year = document.getElementById('yearFilter').value;
+    const industry = document.getElementById('industryFilter').value;
+    
+    let url = '/api/alumni/?page=' + currentPage;
+    if (search) url += '&search=' + encodeURIComponent(search);
+    if (degree) url += '&degree=' + encodeURIComponent(degree);
+    if (status) url += '&status=' + encodeURIComponent(status);
+    if (year) url += '&graduation_year=' + encodeURIComponent(year);
+    if (industry) url += '&industry=' + encodeURIComponent(industry);
+    
+    try {
+        const response = await fetch(url, {
+            headers: token ? { 'Authorization': 'Token ' + token } : {}
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayAlumni(data.results);
+            document.getElementById('resultCount').textContent = data.count || data.results.length;
+            displayPagination(data, url);
+        }
+    } catch (error) {
+        console.error('Error loading alumni:', error);
+        document.getElementById('alumniGrid').innerHTML = '<div class="col-12"><p class="text-danger">Error loading alumni</p></div>';
+    }
+}
+
+function displayAlumni(alumni) {
+    if (alumni.length === 0) {
+        document.getElementById('alumniGrid').innerHTML = '<div class="col-12 text-center text-muted"><p>No alumni found</p></div>';
+        return;
+    }
+    
+    const html = alumni.map(a => `
+        <div class="col-md-6 col-lg-4">
+            <div class="card alumni-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="alumni-avatar me-3">
+                            ${(a.first_name.charAt(0) + a.last_name.charAt(0)).toUpperCase()}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-0">${a.first_name} ${a.last_name}</h5>
+                            <small class="text-muted">${a.current_company || 'Not specified'}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <p class="mb-2 small">
+                            <i class="fas fa-briefcase text-primary"></i> <strong>${a.job_title || 'N/A'}</strong>
+                        </p>
+                        <p class="mb-2 small">
+                            <i class="fas fa-graduation-cap text-success"></i> ${a.degree || 'N/A'} in ${a.field_of_study || 'N/A'}
+                        </p>
+                        <p class="mb-2 small">
+                            <i class="fas fa-calendar text-warning"></i> Graduated ${a.graduation_year || 'N/A'}
+                        </p>
+                        <p class="mb-2 small">
+                            <i class="fas fa-industry text-info"></i> ${a.industry || 'Not specified'}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="badge ${a.status === 'active' ? 'bg-success' : 'bg-secondary'}">
+                            ${(a.status || 'inactive').toUpperCase()}
+                        </span>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="mailto:${a.email}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-envelope"></i> Contact
+                        </a>
+                        ${a.linkedin_url ? `<a href="${a.linkedin_url}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-linkedin"></i> LinkedIn</a>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('alumniGrid').innerHTML = html;
+}
+
+function displayPagination(data, baseUrl) {
+    if (!data.next && !data.previous) {
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    
+    let html = '<ul class="pagination justify-content-center">';
+    
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage--; loadAlumni(); return false;">← Previous</a></li>`;
+    }
+    
+    html += `<li class="page-item disabled"><span class="page-link">Page ${currentPage}</span></li>`;
+    
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage++; loadAlumni(); return false;">Next →</a></li>`;
+    }
+    
+    html += '</ul>';
+    document.getElementById('pagination').innerHTML = html;
+}
+</script>
+{% endblock %}

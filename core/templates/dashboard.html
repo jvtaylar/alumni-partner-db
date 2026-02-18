@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .stat-box {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .action-btn {
+        border-radius: 8px;
+        padding: 10px 20px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn-primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .action-btn-primary:hover {
+        background: #764ba2;
+        color: white;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 30px 0 20px 0;
+        color: #333;
+    }
+    
+    .card-hover {
+        transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transform: translateY(-3px);
+    }
+</style>
+
+<!-- Dashboard Header -->
+<section class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">Welcome, <span id="userName">Loading...</span>!</h1>
+                <p class="lead mb-0">Your Alumni Network Dashboard</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-box">
+                <div class="stat-number">{{ alumni_count }}</div>
+                <div class="stat-label">Total Alumni</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-box">
+                <div class="stat-number">{{ partner_count }}</div>
+                <div class="stat-label">Partner Organizations</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-box">
+                <div class="stat-number">{{ engagement_count }}</div>
+                <div class="stat-label">Total Engagements</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Profile Section -->
+        <div class="col-lg-8">
+            <div class="card card-hover mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-user-circle text-primary"></i> Your Profile
+                    </h5>
+                    
+                    <div id="profileContent" style="min-height: 200px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card card-hover mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-bolt text-warning"></i> Quick Actions
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="/alumni/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-users"></i> Browse Alumni
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <a href="/partners/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-building"></i> View Partners
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="/engagements/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-handshake"></i> View Engagements
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <a href="/analytics/" class="action-btn action-btn-primary w-100 text-center">
+                                <i class="fas fa-chart-bar"></i> Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Examples removed per request -->
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Recent Activity -->
+            <div class="card card-hover mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-history text-info"></i> Account Info
+                    </h5>
+                    <ul class="list-unstyled small" id="accountInfo">
+                        <li class="mb-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Network Stats -->
+            <div class="card card-hover mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-pie text-success"></i> Network Overview
+                    </h5>
+                    <div class="small">
+                        <p class="mb-2">
+                            <strong>Active Alumni:</strong><br>
+                            <span class="text-success fw-bold">{{ alumni_count }}</span>
+                        </p>
+                        <p class="mb-2">
+                            <strong>Partners:</strong><br>
+                            <span class="text-primary fw-bold">{{ partner_count }}</span>
+                        </p>
+                        <p>
+                            <strong>Connections:</strong><br>
+                            <span class="text-warning fw-bold">{{ engagement_count }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div id="resourcesCard" class="card card-hover">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-question-circle text-primary"></i> Resources
+                    </h5>
+                    <ul class="list-unstyled small">
+                        <!-- API Documentation link removed from Resources -->
+                        <li class="mb-2">
+                            <a href="/admin/" target="_blank" class="text-decoration-none">
+                                <i class="fas fa-cog"></i> Admin Panel
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="/" class="text-decoration-none">
+                                <i class="fas fa-home"></i> Home Page
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="logout()" class="text-decoration-none text-danger">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check authentication and load user data
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+        // No token, redirect to login
+        window.location.href = '/login/';
+        return;
+    }
+    
+    // Fetch current user data
+    loadUserProfile(token);
+});
+
+async function loadUserProfile(token) {
+    try {
+        // Get current user info
+        const response = await fetch('/auth/user/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token
+            }
+        });
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Token invalid
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+                window.location.href = '/login/';
+            }
+            return;
+        }
+        
+        const response_data = await response.json();
+        
+        // The response has a 'user' property with the actual user data
+        const user = response_data.user;
+        
+        console.log('User data:', user);
+        console.log('First name:', user.first_name, 'Type:', typeof user.first_name, 'Trimmed:', user.first_name ? user.first_name.trim() : 'N/A');
+        
+        // Update user name - use first name if available, otherwise username
+        let displayName = user.first_name && user.first_name.trim() ? user.first_name : user.username;
+        console.log('Display name set to:', displayName);
+        document.getElementById('userName').textContent = displayName;
+        
+        // Load alumni profile
+        loadAlumniProfile(user.id, token);
+
+        // Update account info
+        updateAccountInfo(user);
+
+        // Show or hide the Resources card depending on admin status
+        const resourcesCard = document.getElementById('resourcesCard');
+        if (resourcesCard) {
+            // If `is_staff` is true, show; otherwise hide.
+            if (user.is_staff) {
+                resourcesCard.style.display = '';
+            } else {
+                resourcesCard.style.display = 'none';
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+}
+
+async function loadAlumniProfile(userId, token) {
+    try {
+        const response = await fetch('/api/my-profile/?user=' + userId, {
+            headers: {
+                'Authorization': 'Token ' + token
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+
+            // API may return a single object for the current user's profile
+            // or a list/paginated results depending on the view implementation.
+            let alumni = null;
+
+            if (Array.isArray(data)) {
+                alumni = data.length > 0 ? data[0] : null;
+            } else if (data && data.results) {
+                alumni = Array.isArray(data.results) && data.results.length > 0 ? data.results[0] : null;
+            } else if (data && typeof data === 'object' && !data.error) {
+                alumni = data;
+            }
+
+            if (alumni) {
+                displayProfile(alumni);
+            } else {
+                displayNoProfile();
+            }
+        } else {
+            displayNoProfile();
+        }
+    } catch (error) {
+        console.error('Error loading alumni profile:', error);
+        displayNoProfile();
+    }
+}
+
+function displayProfile(alumni) {
+    const html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p class="mb-2">
+                    <strong>Name:</strong><br>
+                    ${alumni.user?.first_name || ''} ${alumni.user?.last_name || ''}
+                </p>
+                <p class="mb-2">
+                    <strong>Email:</strong><br>
+                    ${alumni.user?.email || 'Not specified'}
+                </p>
+                <p class="mb-2">
+                    <strong>Degree:</strong><br>
+                    ${alumni.degree || 'Not specified'}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-2">
+                    <strong>Field of Study:</strong><br>
+                    ${alumni.field_of_study || 'Not specified'}
+                </p>
+                <p class="mb-2">
+                    <strong>Graduation Year:</strong><br>
+                    ${alumni.graduation_year || 'Not specified'}
+                </p>
+                <p class="mb-2">
+                    <strong>Current Company:</strong><br>
+                    ${alumni.current_company || 'Not specified'}
+                </p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-2">
+                    <strong>Job Title:</strong><br>
+                    ${alumni.job_title || 'Not specified'}
+                </p>
+                <p class="mb-2">
+                    <strong>Industry:</strong><br>
+                    ${alumni.industry || 'Not specified'}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-2">
+                    <strong>Phone:</strong><br>
+                    ${alumni.phone || 'Not specified'}
+                </p>
+                <p class="mb-2">
+                    <strong>Status:</strong><br>
+                    <span class="badge ${alumni.status === 'active' ? 'bg-success' : 'bg-secondary'}">
+                        ${(alumni.status || 'inactive').toUpperCase()}
+                    </span>
+                </p>
+            </div>
+        </div>
+        
+        <hr>
+        <!-- API documentation link removed -->
+    `;
+    document.getElementById('profileContent').innerHTML = html;
+}
+
+function displayNoProfile() {
+    const html = `
+        <p class="text-muted">
+            You don't have an alumni profile yet. 
+            <a href="/register/">Create one now</a>
+        </p>
+    `;
+    document.getElementById('profileContent').innerHTML = html;
+}
+
+function updateAccountInfo(user) {
+    const html = `
+        <li class="mb-2">
+            <strong>Username:</strong><br>
+            ${user.username}
+        </li>
+        <li class="mb-2">
+            <strong>Member Since:</strong><br>
+            ${new Date(user.date_joined).toLocaleDateString()}
+        </li>
+        <li class="mb-2">
+            <strong>Last Login:</strong><br>
+            ${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+        </li>
+        <li>
+            <strong>Account Status:</strong><br>
+            <span class="badge bg-success">Active</span>
+        </li>
+    `;
+    document.getElementById('accountInfo').innerHTML = html;
+}
+
+// Display auth token if available
+function displayAuthToken() {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+        document.getElementById('tokenDisplay').textContent = token.substring(0, 10) + '...';
+    }
+}
+
+async function logout() {
+    const csrftoken = getCookie('csrftoken');
+    const token = localStorage.getItem('authToken');
+    
+    try {
+        const response = await fetch('/auth/logout/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+                'Authorization': 'Token ' + token
+            }
+        });
+        
+        if (response.ok) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            window.location.href = '/login/';
+        }
+    } catch (error) {
+        alert('Error logging out. Please try again.');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

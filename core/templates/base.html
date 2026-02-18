@@ -1,0 +1,448 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Alumni Partner Connect{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #003d82 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .navbar-brand {
+            font-weight: 600;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+        
+        .navbar-brand img {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            width: 45px;
+            height: auto;
+        }
+        
+        .navbar-brand:hover img {
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+        }
+        
+        .text-gold {
+            color: #FFD700;
+            font-weight: 600;
+        }
+        
+        .nav-link {
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: #ffc107 !important;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #003d82 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+        
+        .hero-btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        
+        .hero-btn {
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .hero-btn-primary {
+            background-color: white;
+            color: #0052a3;
+            border: 2px solid white;
+        }
+        
+        .hero-btn-primary:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        .hero-btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .hero-btn-secondary:hover {
+            background-color: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #003d82;
+            border-color: #003d82;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .feature-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            height: 100%;
+            overflow: hidden;
+            border-top: 4px solid var(--primary-color);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .feature-card .card-body {
+            padding: 30px;
+        }
+        
+        .feature-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: rgba(0,82,163,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .feature-card .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .feature-card .card-text {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .feature-card ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+        
+        .feature-card ul li {
+            margin-bottom: 8px;
+            color: #999;
+        }
+        
+        .features-section {
+            padding: 80px 0;
+            background-color: #f8f9fa;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 50px;
+            color: var(--primary-color);
+        }
+        
+        .api-section {
+            padding: 80px 0;
+            background-color: white;
+        }
+        
+        .api-section h4 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .api-endpoint {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px 20px;
+            margin: 12px 0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border-right: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .api-endpoint:hover {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .api-endpoint strong {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
+        .stats-section {
+            padding: 80px 0;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #003d82 100%);
+            color: white;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+        
+        .footer {
+            background-color: #212529;
+            color: white;
+            padding: 40px 0;
+            margin-top: 80px;
+        }
+        
+        .footer-link {
+            color: #adb5bd;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            color: white;
+        }
+        
+        .badge-custom {
+            background-color: var(--primary-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="{% static 'images/nu-logo.png' %}" alt="NU Logo" height="50" class="me-2">
+                <span>Alumni Partner <span class="text-gold">Connect</span></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item" id="alumniLink" style="display: none;"><a class="nav-link" href="/alumni/">Alumni</a></li>
+                    <li class="nav-item" id="partnersLink" style="display: none;"><a class="nav-link" href="/partners/">Partners</a></li>
+                    <li class="nav-item" id="engagementsLink" style="display: none;"><a class="nav-link" href="/engagements/">Engagements</a></li>
+                    <li class="nav-item" id="analyticsLink" style="display: none;"><a class="nav-link" href="/analytics/">Analytics</a></li>
+                    <li class="nav-item" id="dashboardLink" style="display: none;"><a class="nav-link" href="/dashboard/">Dashboard</a></li>
+                    <li class="nav-item" id="logoutBtn" style="display: none;"><a class="nav-link" href="#" onclick="logout(); return false;">Logout</a></li>
+                    <li class="nav-item" id="loginLink"><a class="nav-link" href="/login/">Login</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+    // Update navigation based on login status
+    function updateNavigation() {
+        const token = localStorage.getItem('authToken');
+        const links = ['alumniLink', 'partnersLink', 'engagementsLink', 'analyticsLink', 'dashboardLink', 'logoutBtn'];
+        const loginLink = 'loginLink';
+        
+        if (token) {
+            // User is logged in
+            links.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) elem.style.display = 'block';
+            });
+            const elem = document.getElementById(loginLink);
+            if (elem) elem.style.display = 'none';
+        } else {
+            // User is not logged in
+            links.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) elem.style.display = 'none';
+            });
+            const elem = document.getElementById(loginLink);
+            if (elem) elem.style.display = 'block';
+        }
+    }
+    
+    async function logout() {
+        const csrftoken = getCookie('csrftoken');
+        const token = localStorage.getItem('authToken');
+        
+        try {
+            await fetch('/auth/logout/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                    'Authorization': 'Token ' + token
+                }
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        updateNavigation();
+        window.location.href = '/';
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Update nav on page load
+    document.addEventListener('DOMContentLoaded', updateNavigation);
+    </script>
+
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5>Alumni Partner Connect</h5>
+                    <p class="text-muted">A centralized system for managing alumni relationships and partnerships.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a class="footer-link" href="/api/docs/">API Documentation</a></li>
+                        <li><a class="footer-link" href="/admin/">Admin Panel</a></li>
+                        <li><a class="footer-link" href="/api/">API Root</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5>Contact</h5>
+                    <p class="text-muted">support@alumni-partner-db.com</p>
+                </div>
+            </div>
+            <hr class="bg-secondary">
+            <div class="text-center text-muted">
+                <p>&copy; 2026 Alumni Partner Connect. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

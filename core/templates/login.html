@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero" style="padding: 60px 0;">
+    <div class="container">
+        <h1>Welcome Back</h1>
+        <p class="lead">Login to your alumni profile</p>
+    </div>
+</section>
+
+<!-- Login Form Section -->
+<section class="api-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-5 mx-auto">
+                <div class="card shadow-lg">
+                    <div class="card-body p-5">
+                        <h2 class="card-title text-center mb-4">Alumni Login</h2>
+                        
+                        <form id="loginForm" onsubmit="handleLogin(event)">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username" required autofocus>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control form-control-lg" id="password" name="password" required>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="rememberMe" name="remember_me">
+                                <label class="form-check-label" for="rememberMe">
+                                    Remember me
+                                </label>
+                            </div>
+
+                            <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                            <div id="successMessage" class="alert alert-success d-none" role="alert"></div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </button>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <p class="text-center text-muted mb-2">
+                            Don't have an account? <a href="/register/">Register here</a>
+                        </p>
+                        
+                        <p class="text-center text-muted small">
+                            <a href="#forgot">Forgot your password?</a>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Info Cards -->
+                <div class="card mt-4 border-info">
+                    <div class="card-body">
+                        <h5 class="card-title">Demo Credentials</h5>
+                        <p class="small mb-2">
+                            <strong>Admin Account:</strong><br>
+                            Username: <code>admin</code><br>
+                            Password: <code>admin</code>
+                        </p>
+                        <p class="small">
+                            <strong>Available Endpoints:</strong><br>
+                            <code>GET /api/alumni/</code> - List alumni<br>
+                            <code>GET /api/partners/</code> - List partners<br>
+                            <code>GET /api/docs/</code> - API documentation
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const data = {
+        username: formData.get('username'),
+        password: formData.get('password')
+    };
+    const csrftoken = getCookie('csrftoken');
+    
+    // Clear messages
+    document.getElementById('errorMessage').classList.add('d-none');
+    document.getElementById('successMessage').classList.add('d-none');
+    
+    try {
+        const response = await fetch('/auth/login/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // Store token in localStorage
+            localStorage.setItem('authToken', result.token);
+            localStorage.setItem('userId', result.user.id);
+            
+            document.getElementById('successMessage').textContent = 'Login successful! Redirecting to dashboard...';
+            document.getElementById('successMessage').classList.remove('d-none');
+            
+            setTimeout(() => {
+                window.location.href = '/dashboard/';
+            }, 2000);
+        } else {
+            document.getElementById('errorMessage').textContent = result.error || 'Invalid credentials. Please try again.';
+            document.getElementById('errorMessage').classList.remove('d-none');
+        }
+    } catch (error) {
+        document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
+        document.getElementById('errorMessage').classList.remove('d-none');
+    }
+}
+
+// Show registered message if applicable
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('registered') === 'true') {
+    const successMsg = document.getElementById('successMessage');
+    successMsg.textContent = 'Registration successful! Please login with your credentials.';
+    successMsg.classList.remove('d-none');
+}
+</script>
+{% endblock %}

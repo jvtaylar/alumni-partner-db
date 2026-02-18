@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Partners - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<script>
+if (!localStorage.getItem('authToken')) window.location.href = '/login/';
+</script>
+<style>
+    .search-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .partner-card {
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .partner-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .engagement-badge {
+        display: inline-block;
+        background: #e9ecef;
+        padding: 8px 16px;
+        border-radius: 20px;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+    }
+</style>
+
+<!-- Search Section -->
+<section class="search-section">
+    <div class="container">
+        <h1 class="mb-4">Partner Organizations</h1>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="input-group input-group-lg">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search partners by name..." onkeyup="debounceSearch()">
+                    <button class="btn btn-light" type="button" onclick="searchPartners()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Results Count -->
+    <div class="mb-4">
+        <p class="text-muted">
+            Showing <span id="resultCount">0</span> partners
+            <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()" style="float: right;">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </p>
+    </div>
+    
+    <!-- Partners Grid -->
+    <div class="row g-4" id="partnersGrid">
+        <div class="col-12 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <nav id="pagination" class="mt-5 mb-5"></nav>
+</div>
+
+<script>
+let searchTimeout;
+let currentPage = 1;
+
+// Load partners on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadPartners();
+});
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(searchPartners, 500);
+}
+
+async function searchPartners() {
+    currentPage = 1;
+    await loadPartners();
+}
+
+async function loadPartners() {
+    const token = localStorage.getItem('authToken');
+    const search = document.getElementById('searchInput').value;
+    
+    let url = '/api/partners/?page=' + currentPage;
+    if (search) url += '&search=' + encodeURIComponent(search);
+    
+    try {
+        const response = await fetch(url, {
+            headers: token ? { 'Authorization': 'Token ' + token } : {}
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayPartners(data.results);
+            document.getElementById('resultCount').textContent = data.count || data.results.length;
+            displayPagination(data);
+        }
+    } catch (error) {
+        console.error('Error loading partners:', error);
+        document.getElementById('partnersGrid').innerHTML = '<div class="col-12"><p class="text-danger">Error loading partners</p></div>';
+    }
+}
+
+function displayPartners(partners) {
+    if (partners.length === 0) {
+        document.getElementById('partnersGrid').innerHTML = '<div class="col-12 text-center text-muted"><p>No partners found</p></div>';
+        return;
+    }
+    
+    const html = partners.map(p => `
+        <div class="col-md-6 col-lg-4">
+            <div class="card partner-card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5 class="card-title">${p.name}</h5>
+                        <p class="text-muted small mb-0">${p.partner_type || 'Organization'}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <p class="mb-2 small">
+                            <i class="fas fa-map-marker-alt text-danger"></i> ${p.location || 'Not specified'}
+                        </p>
+                        <p class="mb-2 small">
+                            <i class="fas fa-globe text-info"></i> ${p.website || 'No website'}
+                        </p>
+                        <p class="mb-2 small">
+                            <i class="fas fa-phone text-success"></i> ${p.contact_email || 'No contact'}
+                        </p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <p class="mb-2 small text-muted">${p.description || 'No description available'}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="small">Engagement Level:</strong><br>
+                        <span class="badge ${
+                            p.engagement_level === 'high' ? 'bg-success' :
+                            p.engagement_level === 'medium' ? 'bg-warning' :
+                            'bg-secondary'
+                        }">
+                            ${(p.engagement_level || 'low').toUpperCase()}
+                        </span>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="mailto:${p.contact_email}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-envelope"></i> Contact
+                        </a>
+                        ${p.website ? `<a href="${p.website}" target="_blank" class="btn btn-sm btn-outline-info"><i class="fas fa-external-link-alt"></i> Website</a>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('partnersGrid').innerHTML = html;
+}
+
+function displayPagination(data) {
+    if (!data.next && !data.previous) {
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    
+    let html = '<ul class="pagination justify-content-center">';
+    
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage--; loadPartners(); return false;">← Previous</a></li>`;
+    }
+    
+    html += `<li class="page-item disabled"><span class="page-link">Page ${currentPage}</span></li>`;
+    
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage++; loadPartners(); return false;">Next →</a></li>`;
+    }
+    
+    html += '</ul>';
+    document.getElementById('pagination').innerHTML = html;
+}
+</script>
+{% endblock %}

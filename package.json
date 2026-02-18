@@ -1,0 +1,18 @@
+{
+  "name": "alumni-partner-db",
+  "version": "1.0.0",
+  "description": "Alumni Partner Connect - Django REST API with frontend support",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "alumni",
+    "partnership",
+    "database"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}

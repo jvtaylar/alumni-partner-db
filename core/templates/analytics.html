@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<script>
+if (!localStorage.getItem('authToken')) window.location.href = '/login/';
+</script>
+<style>
+    .analytics-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        transform: translateY(-3px);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #667eea;
+        margin: 20px 0;
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.95rem;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 20px 0;
+    }
+    
+    .report-card {
+        border-left: 4px solid #667eea;
+    }
+</style>
+
+<!-- Header -->
+<section class="analytics-header">
+    <div class="container">
+        <h1>Analytics & Reports</h1>
+        <p class="lead">Network insights and engagement metrics</p>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Key Metrics -->
+    <div class="row mb-5">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Total Alumni</div>
+                <div class="metric-value" id="totalAlumni">-</div>
+                <small class="text-muted">Active members</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Partner Organizations</div>
+                <div class="metric-value" id="totalPartners">-</div>
+                <small class="text-muted">Active partners</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Total Engagements</div>
+                <div class="metric-value" id="totalEngagements">-</div>
+                <small class="text-muted">Recorded interactions</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Engagement Rate</div>
+                <div class="metric-value" id="engagementRate">-</div>
+                <small class="text-muted">Per alumni</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Engagement by Type -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="metric-card">
+                <h5>Engagements by Type</h5>
+                <div class="chart-container">
+                    <canvas id="engagementTypeChart"></canvas>
+                </div>
+                <div id="engagementTypeList" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="metric-card">
+                <h5>Top Engagement Partners</h5>
+                <div id="topPartners" style="padding-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alumni Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="metric-card">
+                <h5>Alumni by Status</h5>
+                <div id="alumniByStatus" style="padding-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="metric-card">
+                <h5>Alumni by Degree</h5>
+                <div id="alumniByDegree" style="padding-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Industries -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="metric-card">
+                <h5>Industries Represented</h5>
+                <div id="topIndustries" style="padding-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reports -->
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="metric-card report-card">
+                <h5 class="mb-3">Generate Report</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-primary w-100" onclick="generateReport('alumni')">
+                            <i class="fas fa-file-pdf"></i> Alumni Summary
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-primary w-100" onclick="generateReport('partner')">
+                            <i class="fas fa-file-pdf"></i> Partner Summary
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <button class="btn btn-primary w-100" onclick="generateReport('engagement')">
+                            <i class="fas fa-file-pdf"></i> Engagement Report
+                        </button>
+                    </div>
+                </div>
+                <div id="reportResult" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalytics();
+});
+
+async function loadAnalytics() {
+    const token = localStorage.getItem('authToken');
+    
+    try {
+        // Load all data
+        const [alumniRes, partnersRes, engagementsRes] = await Promise.all([
+            fetch('/api/alumni/?page_size=1', { headers: token ? { 'Authorization': 'Token ' + token } : {} }),
+            fetch('/api/partners/?page_size=1', { headers: token ? { 'Authorization': 'Token ' + token } : {} }),
+            fetch('/api/engagements/?page_size=1', { headers: token ? { 'Authorization': 'Token ' + token } : {} })
+        ]);
+        
+        const alumni = await alumniRes.json();
+        const partners = await partnersRes.json();
+        const engagements = await engagementsRes.json();
+        
+        // Load detailed data
+        const [alumniDetailRes, engagementsDetailRes] = await Promise.all([
+            fetch(`/api/alumni/?page_size=${alumni.count || 100}`, { headers: token ? { 'Authorization': 'Token ' + token } : {} }),
+            fetch(`/api/engagements/?page_size=${engagements.count || 100}`, { headers: token ? { 'Authorization': 'Token ' + token } : {} })
+        ]);
+        
+        const alumniDetail = await alumniDetailRes.json();
+        const engagementsDetail = await engagementsDetailRes.json();
+        
+        // Update metrics
+        document.getElementById('totalAlumni').textContent = alumni.count || 0;
+        document.getElementById('totalPartners').textContent = partners.count || 0;
+        document.getElementById('totalEngagements').textContent = engagements.count || 0;
+        
+        const rate = alumni.count ? (engagements.count / alumni.count).toFixed(1) : 0;
+        document.getElementById('engagementRate').textContent = rate;
+        
+        // Process data
+        processEngagementData(engagementsDetail.results);
+        processAlumniData(alumniDetail.results);
+        processTopPartners(engagementsDetail.results);
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+function processEngagementData(engagements) {
+    const types = {};
+    engagements.forEach(e => {
+        types[e.engagement_type] = (types[e.engagement_type] || 0) + 1;
+    });
+    
+    // Display chart
+    const ctx = document.getElementById('engagementTypeChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(types),
+                datasets: [{
+                    data: Object.values(types),
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Display list
+    let html = '<ul class="list-unstyled">';
+    Object.entries(types).forEach(([type, count]) => {
+        const percentage = ((count / engagements.length) * 100).toFixed(1);
+        html += `
+            <li class="mb-2">
+                <div class="d-flex justify-content-between">
+                    <span><strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong></span>
+                    <span class="badge bg-primary">${count}</span>
+                </div>
+                <div class="progress" style="height: 5px;">
+                    <div class="progress-bar" style="width: ${percentage}%"></div>
+                </div>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    document.getElementById('engagementTypeList').innerHTML = html;
+}
+
+function processAlumniData(alumni) {
+    const statuses = {};
+    const degrees = {};
+    const industries = {};
+    
+    alumni.forEach(a => {
+        statuses[a.status] = (statuses[a.status] || 0) + 1;
+        degrees[a.degree] = (degrees[a.degree] || 0) + 1;
+        if (a.industry) {
+            industries[a.industry] = (industries[a.industry] || 0) + 1;
+        }
+    });
+    
+    // Display statuses
+    let html = '<ul class="list-unstyled">';
+    Object.entries(statuses).forEach(([status, count]) => {
+        html += `
+            <li class="mb-2">
+                <span class="badge ${status === 'active' ? 'bg-success' : 'bg-secondary'}">${status.toUpperCase()}</span>
+                <strong>${count}</strong> alumni
+            </li>
+        `;
+    });
+    html += '</ul>';
+    document.getElementById('alumniByStatus').innerHTML = html;
+    
+    // Display degrees
+    html = '<ul class="list-unstyled">';
+    Object.entries(degrees).forEach(([degree, count]) => {
+        html += `
+            <li class="mb-2">
+                <i class="fas fa-graduation-cap"></i> <strong>${degree || 'Not specified'}</strong>: ${count}
+            </li>
+        `;
+    });
+    html += '</ul>';
+    document.getElementById('alumniByDegree').innerHTML = html;
+    
+    // Display industries
+    html = '<div class="row">';
+    Object.entries(industries).sort((a, b) => b[1] - a[1]).forEach(([industry, count]) => {
+        html += `
+            <div class="col-md-4 mb-2">
+                <div class="card">
+                    <div class="card-body p-3">
+                        <p class="mb-0"><strong>${industry}</strong></p>
+                        <small class="text-muted">${count} alumni</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    document.getElementById('topIndustries').innerHTML = html;
+}
+
+function processTopPartners(engagements) {
+    const partners = {};
+    engagements.forEach(e => {
+        const partnerName = e.partner_details?.name || 'Unknown';
+        partners[partnerName] = (partners[partnerName] || 0) + 1;
+    });
+    
+    let html = '<ol class="list-group">';
+    Object.entries(partners).sort((a, b) => b[1] - a[1]).slice(0, 10).forEach(([name, count]) => {
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                ${name}
+                <span class="badge bg-primary rounded-pill">${count}</span>
+            </li>
+        `;
+    });
+    html += '</ol>';
+    document.getElementById('topPartners').innerHTML = html;
+}
+
+async function generateReport(type) {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+
+    // Map friendly types to the backend action endpoints
+    const endpointMap = {
+        'alumni': '/api/reports/generate_alumni_summary/',
+        'partner': '/api/reports/generate_partner_summary/',
+        'engagement': '/api/reports/generate_engagement_analytics/'
+    };
+
+    const url = endpointMap[type];
+    if (!url) {
+        alert('Unknown report type');
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ generated_at: new Date().toISOString() })
+        });
+
+        if (response.ok) {
+            const report = await response.json();
+            const reportLink = `/api/reports/${report.id}/`;
+            document.getElementById('reportResult').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Report generated successfully!<br>
+                    <small>Report ID: ${report.id} — <a href="${reportLink}" target="_blank">View JSON</a></small>
+                </div>
+            `;
+        } else {
+            const err = await response.json().catch(() => ({}));
+            console.error('Report generation failed:', err);
+            document.getElementById('reportResult').innerHTML = `
+                <div class="alert alert-danger">Error generating report: ${err.error || response.statusText}</div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

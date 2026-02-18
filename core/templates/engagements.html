@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Engagements - Alumni Partner Connect{% endblock %}
+
+{% block content %}
+<script>
+if (!localStorage.getItem('authToken')) window.location.href = '/login/';
+</script>
+<style>
+    .header-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-bottom: 30px;
+    }
+    
+    .engagement-timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .engagement-item {
+        padding: 20px;
+        background: white;
+        border-left: 4px solid #667eea;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .engagement-item:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        transform: translateX(5px);
+    }
+</style>
+
+<!-- Header Section -->
+<section class="header-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h1 class="mb-4">Alumni-Partner Engagements</h1>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <button class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#createEngagementModal">
+                    <i class="fas fa-plus"></i> New Engagement
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <input type="text" class="form-control" id="searchInput" placeholder="Search engagements..." onkeyup="debounceSearch()">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="typeFilter" onchange="applyFilters()">
+                <option value="">All Types</option>
+                <option value="mentorship">Mentorship</option>
+                <option value="recruitment">Recruitment</option>
+                <option value="speaking">Speaking Event</option>
+                <option value="collaboration">Collaboration</option>
+                <option value="internship">Internship</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+    
+    <!-- Results Count -->
+    <div class="mb-4">
+        <p class="text-muted">
+            Showing <span id="resultCount">0</span> engagements
+        </p>
+    </div>
+    
+    <!-- Engagements Timeline -->
+    <div class="engagement-timeline" id="engagementsList">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <nav id="pagination" class="mt-5 mb-5"></nav>
+</div>
+
+<!-- Create Engagement Modal -->
+<div class="modal fade" id="createEngagementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Record New Engagement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="engagementForm" onsubmit="createEngagement(event)">
+                    <div class="mb-3">
+                        <label for="alumniSelect" class="form-label">Alumni *</label>
+                        <select class="form-select" id="alumniSelect" required>
+                            <option value="">Select an alumni...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="partnerSelect" class="form-label">Partner *</label>
+                        <select class="form-select" id="partnerSelect" required>
+                            <option value="">Select a partner...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="engagementType" class="form-label">Engagement Type *</label>
+                        <select class="form-select" id="engagementType" required>
+                            <option value="">Select type...</option>
+                            <option value="mentorship">Mentorship</option>
+                            <option value="recruitment">Recruitment</option>
+                            <option value="speaking">Speaking Event</option>
+                            <option value="collaboration">Collaboration</option>
+                            <option value="internship">Internship</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="engagementDate" class="form-label">Engagement Date *</label>
+                            <input type="date" class="form-control" id="engagementDate" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="engagementOutcome" class="form-label">Outcome</label>
+                            <input type="text" class="form-control" id="engagementOutcome" placeholder="e.g., Job offer">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="engagementNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="engagementNotes" rows="3" placeholder="Details about the engagement..."></textarea>
+                    </div>
+                    
+                    <div id="formError" class="alert alert-danger d-none" role="alert"></div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus"></i> Record Engagement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let searchTimeout;
+let currentPage = 1;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadEngagements();
+    loadAlumniSelect();
+    loadPartnerSelect();
+});
+
+function loadAlumniSelect() {
+    const token = localStorage.getItem('authToken');
+    fetch('/api/alumni/?page_size=100', {
+        headers: token ? { 'Authorization': 'Token ' + token } : {}
+    })
+    .then(r => r.json())
+    .then(data => {
+        const select = document.getElementById('alumniSelect');
+        data.results.forEach(a => {
+            const option = document.createElement('option');
+            option.value = a.id;
+            option.textContent = `${a.first_name} ${a.last_name}`;
+            select.appendChild(option);
+        });
+    });
+}
+
+function loadPartnerSelect() {
+    const token = localStorage.getItem('authToken');
+    fetch('/api/partners/?page_size=100', {
+        headers: token ? { 'Authorization': 'Token ' + token } : {}
+    })
+    .then(r => r.json())
+    .then(data => {
+        const select = document.getElementById('partnerSelect');
+        data.results.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = p.name;
+            select.appendChild(option);
+        });
+    });
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(applyFilters, 500);
+}
+
+async function applyFilters() {
+    currentPage = 1;
+    await loadEngagements();
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('typeFilter').value = '';
+    currentPage = 1;
+    loadEngagements();
+}
+
+async function loadEngagements() {
+    const token = localStorage.getItem('authToken');
+    const search = document.getElementById('searchInput').value;
+    const type = document.getElementById('typeFilter').value;
+    
+    let url = '/api/engagements/?page=' + currentPage;
+    if (type) url += '&engagement_type=' + encodeURIComponent(type);
+    
+    try {
+        const response = await fetch(url, {
+            headers: token ? { 'Authorization': 'Token ' + token } : {}
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayEngagements(data.results);
+            document.getElementById('resultCount').textContent = data.count || data.results.length;
+            displayPagination(data);
+        }
+    } catch (error) {
+        console.error('Error loading engagements:', error);
+    }
+}
+
+function displayEngagements(engagements) {
+    if (engagements.length === 0) {
+        document.getElementById('engagementsList').innerHTML = '<p class="text-center text-muted">No engagements found</p>';
+        return;
+    }
+    
+    const html = engagements.map(e => `
+        <div class="engagement-item">
+            <div class="row">
+                <div class="col-md-8">
+                    <h6 class="mb-2">
+                        <strong>${e.alumni_details?.first_name || 'Alumni'} ${e.alumni_details?.last_name || ''}</strong>
+                        <i class="fas fa-arrow-right mx-2 text-muted"></i>
+                        <strong>${e.partner_details?.name || 'Partner'}</strong>
+                    </h6>
+                    <p class="mb-2">
+                        <span class="badge bg-info">${e.engagement_type?.toUpperCase() || 'N/A'}</span>
+                        <span class="badge bg-secondary">${new Date(e.engagement_date).toLocaleDateString()}</span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    ${e.outcome ? `<p class="mb-0 small text-success"><i class="fas fa-check-circle"></i> ${e.outcome}</p>` : ''}
+                </div>
+            </div>
+            ${e.notes ? `<p class="mb-0 mt-2 text-muted small">${e.notes}</p>` : ''}
+        </div>
+    `).join('');
+    
+    document.getElementById('engagementsList').innerHTML = html;
+}
+
+async function createEngagement(event) {
+    event.preventDefault();
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+    
+    const data = {
+        alumni: parseInt(document.getElementById('alumniSelect').value),
+        partner: parseInt(document.getElementById('partnerSelect').value),
+        engagement_type: document.getElementById('engagementType').value,
+        engagement_date: document.getElementById('engagementDate').value,
+        outcome: document.getElementById('engagementOutcome').value,
+        notes: document.getElementById('engagementNotes').value
+    };
+    
+    try {
+        const response = await fetch('/api/engagements/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ' + token,
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            document.getElementById('engagementForm').reset();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createEngagementModal'));
+            modal.hide();
+            loadEngagements();
+            alert('Engagement recorded successfully!');
+        } else {
+            const error = await response.json();
+            document.getElementById('formError').textContent = JSON.stringify(error);
+            document.getElementById('formError').classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating engagement');
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function displayPagination(data) {
+    if (!data.next && !data.previous) {
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    
+    let html = '<ul class="pagination justify-content-center">';
+    if (data.previous) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage--; loadEngagements(); return false;">← Previous</a></li>`;
+    }
+    html += `<li class="page-item disabled"><span class="page-link">Page ${currentPage}</span></li>`;
+    if (data.next) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="currentPage++; loadEngagements(); return false;">Next →</a></li>`;
+    }
+    html += '</ul>';
+    document.getElementById('pagination').innerHTML = html;
+}
+</script>
+{% endblock %}
